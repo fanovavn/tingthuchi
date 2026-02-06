@@ -8,7 +8,6 @@ import {
     LayoutDashboard,
     Receipt,
     Tag,
-    Upload,
     Settings,
 } from 'lucide-react';
 
@@ -19,7 +18,6 @@ const NAV_ITEMS = [
 ];
 
 const BOTTOM_NAV_ITEMS = [
-    { href: '/upload', label: 'Import Excel', icon: Upload },
     { href: '/settings', label: 'Cài đặt', icon: Settings },
 ];
 
