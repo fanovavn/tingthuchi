@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Moon, Sun, Cloud, Lock, LogOut, Link as LinkIcon, Copy, Check, ExternalLink, AlertCircle } from 'lucide-react';
+import { Moon, Sun, Cloud, Lock, LogOut, Copy, Check, ExternalLink, AlertCircle } from 'lucide-react';
 import { useAuth, ChangePasswordForm } from '@/components/auth';
 import { useTheme } from '@/components/theme';
 
@@ -12,8 +12,6 @@ export default function SettingsPage() {
     const { theme, toggleTheme } = useTheme();
     const [showPasswordForm, setShowPasswordForm] = useState(false);
     const [spreadsheetId, setSpreadsheetId] = useState('');
-    const [isSaving, setIsSaving] = useState(false);
-    const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [copied, setCopied] = useState(false);
 
     // Load config on mount
@@ -27,49 +25,6 @@ export default function SettingsPage() {
             })
             .catch(console.error);
     }, []);
-
-    const extractSpreadsheetId = (input: string): string => {
-        // If it's a full URL, extract the ID
-        const match = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-        if (match) {
-            return match[1];
-        }
-        // Otherwise assume it's already an ID
-        return input.trim();
-    };
-
-    const handleSaveSpreadsheet = async () => {
-        const id = extractSpreadsheetId(spreadsheetId);
-        if (!id) {
-            setSaveStatus('error');
-            return;
-        }
-
-        setIsSaving(true);
-        setSaveStatus('idle');
-
-        try {
-            const res = await fetch('/api/config', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ spreadsheetId: id }),
-            });
-
-            if (res.ok) {
-                setSpreadsheetId(id);
-                setSaveStatus('success');
-                // Reload data after changing spreadsheet
-                window.location.reload();
-            } else {
-                setSaveStatus('error');
-            }
-        } catch (error) {
-            console.error(error);
-            setSaveStatus('error');
-        } finally {
-            setIsSaving(false);
-        }
-    };
 
     const handleCopyEmail = async () => {
         await navigator.clipboard.writeText(SERVICE_ACCOUNT_EMAIL);
@@ -120,8 +75,18 @@ export default function SettingsPage() {
                             </code>
                         </li>
                         <li><strong>4.</strong> Share spreadsheet với email bên dưới (quyền <strong>Editor</strong>)</li>
-                        <li><strong>5.</strong> Copy Spreadsheet ID từ URL và dán vào ô bên dưới</li>
+                        <li><strong>5.</strong> Copy Spreadsheet ID từ URL và thêm vào <strong>Environment Variables</strong> trên Vercel/Render</li>
                     </ol>
+                </div>
+
+                {/* Environment Variable Notice */}
+                <div className="mb-4 p-3 bg-[var(--color-warning-bg)] border border-[var(--color-warning)]/20 rounded-lg">
+                    <p className="text-sm text-[var(--color-text-secondary)]">
+                        <strong>⚠️ Chú ý:</strong> Spreadsheet ID được cấu hình qua Environment Variable trên hosting platform (Vercel/Render).
+                    </p>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                        Thêm biến: <code className="px-1 py-0.5 bg-[var(--color-surface-hover)] rounded">GOOGLE_SPREADSHEET_ID</code>
+                    </p>
                 </div>
 
                 {/* Service Account Email */}
@@ -151,53 +116,14 @@ export default function SettingsPage() {
                     )}
                 </div>
 
-                {/* Spreadsheet ID Input */}
-                <div className="mb-4">
-                    <label className="block text-xs text-[var(--color-text-muted)] mb-1">
-                        Spreadsheet ID hoặc URL
-                    </label>
-                    <div className="flex gap-2">
-                        <div className="flex-1 relative">
-                            <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" />
-                            <input
-                                type="text"
-                                value={spreadsheetId}
-                                onChange={(e) => {
-                                    setSpreadsheetId(e.target.value);
-                                    setSaveStatus('idle');
-                                }}
-                                placeholder="https://docs.google.com/spreadsheets/d/xxx/edit hoặc xxx"
-                                className="input pl-10 w-full"
-                            />
-                        </div>
-                        <button
-                            onClick={handleSaveSpreadsheet}
-                            disabled={isSaving || !spreadsheetId.trim()}
-                            className="btn btn-primary"
-                        >
-                            {isSaving ? 'Đang lưu...' : 'Lưu'}
-                        </button>
-                    </div>
-                    {saveStatus === 'success' && (
-                        <p className="text-xs text-[var(--color-success)] mt-1 flex items-center gap-1">
-                            <Check className="w-3 h-3" /> Đã lưu và đang tải lại dữ liệu...
-                        </p>
-                    )}
-                    {saveStatus === 'error' && (
-                        <p className="text-xs text-[var(--color-danger)] mt-1">
-                            Không thể lưu. Vui lòng kiểm tra lại ID.
-                        </p>
-                    )}
-                </div>
-
                 {/* Current Config */}
                 {spreadsheetId && (
                     <div className="p-3 bg-[var(--color-surface-hover)] rounded-lg">
                         <p className="text-xs text-[var(--color-text-muted)] mb-1">Spreadsheet ID hiện tại:</p>
                         <div className="flex items-center gap-2">
-                            <code className="text-sm flex-1 truncate">{extractSpreadsheetId(spreadsheetId)}</code>
+                            <code className="text-sm flex-1 truncate">{spreadsheetId}</code>
                             <a
-                                href={`https://docs.google.com/spreadsheets/d/${extractSpreadsheetId(spreadsheetId)}/edit`}
+                                href={`https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-[var(--color-primary)] hover:underline flex items-center gap-1 text-sm"
@@ -205,6 +131,14 @@ export default function SettingsPage() {
                                 Mở <ExternalLink className="w-3 h-3" />
                             </a>
                         </div>
+                    </div>
+                )}
+
+                {!spreadsheetId && (
+                    <div className="p-3 bg-[var(--color-danger-bg)] border border-[var(--color-danger)]/20 rounded-lg">
+                        <p className="text-sm text-[var(--color-danger)]">
+                            Chưa cấu hình Spreadsheet ID. Vui lòng thêm <code>GOOGLE_SPREADSHEET_ID</code> vào Environment Variables.
+                        </p>
                     </div>
                 )}
             </div>
