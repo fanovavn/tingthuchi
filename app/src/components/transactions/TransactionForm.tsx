@@ -133,8 +133,6 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
             category: formData.category,
             date: new Date(formData.date),
             description: formData.description,
-            account: 'TK Thanh toán',
-            balance: 0,
         });
 
         onCancel();
