@@ -42,13 +42,6 @@ export default function TransactionsPage() {
     const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>();
     const [viewingTransaction, setViewingTransaction] = useState<Transaction | undefined>();
 
-    // Auto-load sample data on first visit
-    useEffect(() => {
-        if (!loading && transactions.length === 0) {
-            loadFromExcel('/List-transaction-excel.xlsx');
-        }
-    }, [loading, transactions.length, loadFromExcel]);
-
     const filteredTransactions = useMemo(() => {
         const baseFilters: TransactionFilter = {
             ...filters,
