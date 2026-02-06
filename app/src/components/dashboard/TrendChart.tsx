@@ -88,10 +88,6 @@ export function TrendChart({ data, title = 'Thu Chi Theo Ngày' }: TrendChartPro
                     },
                 },
             },
-            // Data labels plugin configuration
-            datalabels: {
-                display: false,
-            },
         },
         scales: {
             x: {
