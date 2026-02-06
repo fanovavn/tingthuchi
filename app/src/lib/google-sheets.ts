@@ -2,23 +2,9 @@ import { google } from 'googleapis';
 import { Transaction } from '@/types/transaction';
 import { generateId } from './utils';
 import { format } from 'date-fns';
-import fs from 'fs';
-import path from 'path';
 
-// Config file path
-const CONFIG_PATH = path.join(process.cwd(), 'data', 'sheets-config.json');
-
-// Get Spreadsheet ID from config file
+// Get Spreadsheet ID from environment variable
 const getSpreadsheetId = (): string | null => {
-    try {
-        if (fs.existsSync(CONFIG_PATH)) {
-            const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
-            return config.spreadsheetId || null;
-        }
-    } catch (error) {
-        console.error('Error reading config:', error);
-    }
-    // Fallback to environment variable
     return process.env.GOOGLE_SPREADSHEET_ID || null;
 };
 
