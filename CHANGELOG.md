@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v6.1.0] - 2026-02-08
+
+### Added
+- **Daily Transactions Popup**: Clicking on a day in the Dashboard table now opens a detailed list of transactions for that day.
+- **Daily Transactions Table**: Replaced the chart with a table showing Income, Expense, Difference, and Avg Value.
+
+### Changed
+- **Default Theme**: Application now defaults to **Light Mode**.
+- **Comparison Logic**:
+  - Daily Table: "Chênh lệch" now compares **Expense vs Expense** (Today vs Yesterday).
+  - Top 10 Expenses: Comparison now shows text "Tăng"/"Giảm" instead of icons for clarity.
+- **Linting**: Fixed strict `any` type issues and unused variables in codebase.
+
 ## [v6.0.0] - 2026-02-08
 
 ### Added
