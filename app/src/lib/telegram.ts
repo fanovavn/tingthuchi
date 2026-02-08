@@ -59,5 +59,5 @@ export function formatTransactionMessage(
         month: '2-digit',
     });
 
-    return `${emoji} ${sign}${formattedAmount}₫ : ${description || 'Không có mô tả'} (${dateStr} - ${category})`;
+    return `${emoji} ${sign}${formattedAmount}₫ : ${description || 'Không có mô tả'}\n(${dateStr} - ${category})`;
 }
