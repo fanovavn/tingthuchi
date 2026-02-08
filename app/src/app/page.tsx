@@ -45,7 +45,7 @@ export default function DashboardPage() {
   // Auto-load sample data on first visit
   useEffect(() => {
     if (!loading && transactions.length === 0) {
-      loadFromExcel('/List-transaction-excel.xlsx');
+      loadFromExcel();
     }
   }, [loading, transactions.length, loadFromExcel]);
 
