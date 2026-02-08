@@ -52,16 +52,11 @@ export function formatTransactionMessage(
     type: 'income' | 'expense'
 ): string {
     const formattedAmount = amount.toLocaleString('vi-VN');
-    const emoji = type === 'income' ? '💰' : '💸';
     const sign = type === 'income' ? '+' : '-';
     const dateStr = date.toLocaleDateString('vi-VN', {
         day: '2-digit',
         month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
     });
 
-    return `${emoji} <b>${sign}${formattedAmount}₫</b> - ${description || 'Không có mô tả'} - ${dateStr}
-[${category}]`;
+    return `${sign}${formattedAmount}₫ - ${description || 'Không có mô tả'} - ${dateStr}`;
 }
