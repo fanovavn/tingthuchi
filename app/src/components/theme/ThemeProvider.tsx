@@ -11,7 +11,7 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-    theme: 'dark',
+    theme: 'light',
     setTheme: () => { },
     toggleTheme: () => { },
 });
@@ -19,7 +19,7 @@ const ThemeContext = createContext<ThemeContextType>({
 const THEME_KEY = 'crm-theme';
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-    const [theme, setThemeState] = useState<Theme>('dark');
+    const [theme, setThemeState] = useState<Theme>('light');
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -29,7 +29,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             setThemeState(savedTheme);
             document.documentElement.setAttribute('data-theme', savedTheme);
         } else {
-            document.documentElement.setAttribute('data-theme', 'dark');
+            document.documentElement.setAttribute('data-theme', 'light');
         }
         setMounted(true);
     }, []);

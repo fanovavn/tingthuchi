@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { subMonths, differenceInDays, format } from 'date-fns';
@@ -8,9 +8,11 @@ import { useTransactions } from '@/hooks/useTransactions';
 import { useDateFilter } from '@/hooks/useDateFilter';
 import {
   SummaryCards,
-  TrendChart,
+  DailyTransactionsTable,
+  DailyTransactionsModal,
   CategoryChart,
   IncomeCategoryChart,
+
   DateRangeFilter,
   RecentTransactions,
   TopExpenses,
@@ -111,19 +113,26 @@ export default function DashboardPage() {
   }, [filteredTransactions]);
 
   const trendData = useMemo(() => {
-    const grouped: Record<string, { income: number; expense: number }> = {};
+    const grouped: Record<string, { income: number; expense: number; count: number; date: Date }> = {};
     filteredTransactions.forEach((t) => {
-      const key = `${t.date.getDate()}/${t.date.getMonth() + 1}`;
+      // Use YYYY-MM-DD as key for grouping
+      const key = format(t.date, 'yyyy-MM-dd');
       if (!grouped[key]) {
-        grouped[key] = { income: 0, expense: 0 };
+        grouped[key] = {
+          income: 0,
+          expense: 0,
+          count: 0,
+          date: t.date
+        };
       }
       if (t.type === 'income') {
         grouped[key].income += t.amount;
       } else {
         grouped[key].expense += t.amount;
       }
+      grouped[key].count += 1;
     });
-    return grouped;
+    return Object.values(grouped);
   }, [filteredTransactions]);
 
   // Calculate days in current period
@@ -135,6 +144,19 @@ export default function DashboardPage() {
   const expenseTransactionCount = useMemo(() => {
     return filteredTransactions.filter(t => t.type === 'expense').length;
   }, [filteredTransactions]);
+
+  // State for daily transactions modal
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+  // Filter transactions for the selected date
+  const selectedDateTransactions = useMemo(() => {
+    if (!selectedDate) return [];
+    return filteredTransactions.filter(t =>
+      t.date.getDate() === selectedDate.getDate() &&
+      t.date.getMonth() === selectedDate.getMonth() &&
+      t.date.getFullYear() === selectedDate.getFullYear()
+    );
+  }, [selectedDate, filteredTransactions]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -195,10 +217,11 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Trend Chart - Full width */}
-      <TrendChart
+      {/* Daily Transactions Table - Full width */}
+      <DailyTransactionsTable
         data={trendData}
         title="Thu Chi Theo Ngày"
+        onRowClick={(date) => setSelectedDate(date)}
       />
 
       {/* Recent Transactions */}
@@ -207,6 +230,15 @@ export default function DashboardPage() {
         limit={5}
         dateFilter={dateRange}
       />
+
+      {/* Daily Transactions Modal */}
+      {selectedDate && (
+        <DailyTransactionsModal
+          date={selectedDate}
+          transactions={selectedDateTransactions}
+          onClose={() => setSelectedDate(null)}
+        />
+      )}
     </div>
   );
 }

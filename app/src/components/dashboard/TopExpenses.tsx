@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Transaction } from '@/types/transaction';
 import { formatCurrency } from '@/lib/utils';
 import { CategoryLabel } from '@/components/ui/CategoryLabel';
@@ -105,26 +104,17 @@ export function TopExpenses({
                                         {/* Comparison with previous month */}
                                         <div className="flex items-center gap-1 mt-1 flex-wrap">
                                             {difference > 0 ? (
-                                                <>
-                                                    <TrendingUp className="w-3 h-3 text-[var(--color-danger)]" />
-                                                    <span className="text-xs text-[var(--color-danger)]">
-                                                        +{formatCurrency(difference)}
-                                                    </span>
-                                                </>
+                                                <span className="text-xs text-[var(--color-danger)] font-medium">
+                                                    Tăng {formatCurrency(difference)}
+                                                </span>
                                             ) : difference < 0 ? (
-                                                <>
-                                                    <TrendingDown className="w-3 h-3 text-[var(--color-success)]" />
-                                                    <span className="text-xs text-[var(--color-success)]">
-                                                        {formatCurrency(difference)}
-                                                    </span>
-                                                </>
+                                                <span className="text-xs text-[var(--color-success)] font-medium">
+                                                    Giảm {formatCurrency(Math.abs(difference))}
+                                                </span>
                                             ) : (
-                                                <>
-                                                    <Minus className="w-3 h-3 text-[var(--color-text-muted)]" />
-                                                    <span className="text-xs text-[var(--color-text-muted)]">
-                                                        Không đổi
-                                                    </span>
-                                                </>
+                                                <span className="text-xs text-[var(--color-text-muted)]">
+                                                    Không đổi
+                                                </span>
                                             )}
                                             <span className="text-xs text-[var(--color-text-muted)]">
                                                 so với tháng trước

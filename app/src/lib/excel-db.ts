@@ -56,7 +56,7 @@ export class ExcelDB {
     async getAll(): Promise<Transaction[]> {
         const wb = this.getWorkbook();
         const sheet = wb.Sheets[wb.SheetNames[0]];
-        let data = XLSX.utils.sheet_to_json<ExcelRow>(sheet);
+        const data = XLSX.utils.sheet_to_json<ExcelRow>(sheet);
 
         // Auto-generate IDs for rows missing them
         let hasChanges = false;

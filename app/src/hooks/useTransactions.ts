@@ -17,7 +17,7 @@ export function useTransactions() {
             const data = await res.json();
 
             // Convert date strings to Date objects
-            const parsedData = data.map((t: any) => ({
+            const parsedData = data.map((t: Record<string, any>) => ({
                 ...t,
                 date: new Date(t.date || t.DATE || Date.now()), // Handle case sensitivity if needed
             }));
@@ -191,7 +191,7 @@ export function useTransactions() {
         transactions,
         loading,
         error,
-        loadFromExcel: useCallback(async (_url?: string) => fetchTransactions(), [fetchTransactions]),
+        loadFromExcel: useCallback(async () => fetchTransactions(), [fetchTransactions]),
         addTransaction,
         updateTransaction,
         deleteTransaction,

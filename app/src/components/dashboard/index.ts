@@ -7,3 +7,5 @@ export { RecentTransactions } from './RecentTransactions';
 export { DateRangeFilter } from './DateRangeFilter';
 export { TopExpenses } from './TopExpenses';
 export { KeyMetrics } from './KeyMetrics';
+export { DailyTransactionsTable } from './DailyTransactionsTable';
+export { DailyTransactionsModal } from './DailyTransactionsModal';
