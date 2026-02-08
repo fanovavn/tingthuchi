@@ -1,8 +1,8 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { Suspense, useState } from 'react';
+import { ArrowLeft, CheckCircle, Plus, List } from 'lucide-react';
 import { useTransactions } from '@/hooks/useTransactions';
 import { Transaction } from '@/types/transaction';
 import { TransactionForm } from '@/components/transactions';
@@ -13,6 +13,8 @@ function AddTransactionContent() {
     const returnUrl = searchParams.get('returnUrl') || '/transactions';
 
     const { addTransaction } = useTransactions();
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [formKey, setFormKey] = useState(0); // Key to reset form
 
     const handleSubmit = async (data: Omit<Transaction, 'id'>) => {
         // Add transaction to database
@@ -31,8 +33,17 @@ function AddTransactionContent() {
             }),
         }).catch(err => console.error('Telegram notification failed:', err));
 
-        // Navigate back
-        router.push(returnUrl);
+        // Show success popup
+        setShowSuccess(true);
+    };
+
+    const handleAddAnother = () => {
+        setShowSuccess(false);
+        setFormKey(prev => prev + 1); // Reset form by changing key
+    };
+
+    const handleGoToList = () => {
+        router.push('/transactions');
     };
 
     const handleCancel = () => {
@@ -59,10 +70,49 @@ function AddTransactionContent() {
 
             {/* Form - page mode */}
             <TransactionForm
+                key={formKey}
                 onSubmit={handleSubmit}
                 onCancel={handleCancel}
                 mode="page"
             />
+
+            {/* Success Modal */}
+            {showSuccess && (
+                <div className="modal-backdrop" onClick={() => setShowSuccess(false)}>
+                    <div
+                        className="modal-content max-w-sm text-center"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex justify-center mb-4">
+                            <div className="w-16 h-16 rounded-full bg-[var(--color-success)]/20 flex items-center justify-center">
+                                <CheckCircle className="w-10 h-10 text-[var(--color-success)]" />
+                            </div>
+                        </div>
+
+                        <h2 className="text-xl font-bold mb-2">Thành công!</h2>
+                        <p className="text-[var(--color-text-muted)] mb-6">
+                            Giao dịch đã được thêm thành công.
+                        </p>
+
+                        <div className="flex flex-col gap-3">
+                            <button
+                                onClick={handleAddAnother}
+                                className="btn btn-primary w-full flex items-center justify-center gap-2"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Thêm giao dịch khác
+                            </button>
+                            <button
+                                onClick={handleGoToList}
+                                className="btn btn-secondary w-full flex items-center justify-center gap-2"
+                            >
+                                <List className="w-4 h-4" />
+                                Về danh sách giao dịch
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
