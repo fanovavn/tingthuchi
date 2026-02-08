@@ -53,9 +53,11 @@ const saveLastSelections = (date: string, category: string, type: 'income' | 'ex
 
 const getCategoriesForType = (type: 'income' | 'expense') => {
     if (type === 'income') {
-        return ['Lương tháng', 'Freelancer', 'Được tặng', 'Khoản thu khác'];
+        const incomeCats = ['Lương tháng', 'Freelancer', 'Được tặng', 'Khoản thu khác'];
+        return incomeCats.sort((a, b) => a.localeCompare(b, 'vi'));
     }
-    return CATEGORIES.filter(c => !['Lương tháng', 'Freelancer', 'Được tặng', 'Khoản thu khác'].includes(c));
+    const expenseCats = CATEGORIES.filter(c => !['Lương tháng', 'Freelancer', 'Được tặng', 'Khoản thu khác'].includes(c));
+    return expenseCats.sort((a, b) => a.localeCompare(b, 'vi'));
 };
 
 const formatAmountInput = (value: string): string => {

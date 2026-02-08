@@ -60,6 +60,9 @@ export function Sidebar() {
                         <span>{item.label}</span>
                     </Link>
                 ))}
+                <div className="px-3 py-2 text-xs text-[var(--color-text-muted)] opacity-50">
+                    v6.0.0
+                </div>
             </div>
         </aside>
     );

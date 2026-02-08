@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v6.0.0] - 2026-02-08
+
+### Added
+- **UI Version Display**: Added version number display in Desktop Sidebar and Mobile Menu.
+- **Category Sorting**: Categories in "Add Transaction" are now sorted alphabetically (Vietnamese support).
+
+### Changed
+- **Version Bump**: Updated project version to v6.0.0.
+
 ## [v5] - 2026-02-08
 
 ### Added
