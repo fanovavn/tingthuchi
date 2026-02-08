@@ -43,6 +43,8 @@ next-env.d.ts
 
 # Google credentials
 tingthuchi-*.json
+*.json.zip
+Config-demo-*.json.zip
 
 # Data files (contain user data)
 data/*.json
