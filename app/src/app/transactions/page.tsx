@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { Plus } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useDateFilter } from '@/hooks/useDateFilter';
 import { Transaction, TransactionFilter } from '@/types/transaction';
@@ -12,6 +12,7 @@ import { exportToExcel, getCategories } from '@/lib/excel-parser';
 import { formatCurrency } from '@/lib/utils';
 
 export default function TransactionsPage() {
+    const router = useRouter();
     const searchParams = useSearchParams();
     const {
         transactions,
@@ -38,7 +39,6 @@ export default function TransactionsPage() {
     const { dateRange, setDateRange } = useDateFilter({ dataDateRange });
 
     const [filters, setFilters] = useState<TransactionFilter>({});
-    const [showForm, setShowForm] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>();
     const [viewingTransaction, setViewingTransaction] = useState<Transaction | undefined>();
 
@@ -62,23 +62,16 @@ export default function TransactionsPage() {
 
     const handleEdit = (transaction: Transaction) => {
         setEditingTransaction(transaction);
-        setShowForm(true);
     };
 
     const handleSubmit = (data: Omit<Transaction, 'id'>) => {
         if (editingTransaction) {
             updateTransaction(editingTransaction.id, data);
-        } else {
-            addTransaction(data);
+            setEditingTransaction(undefined);
         }
-        setShowForm(false);
-        setEditingTransaction(undefined);
     };
 
-    const handleBatchSubmit = (dataList: Omit<Transaction, 'id'>[]) => {
-        dataList.forEach(data => addTransaction(data));
-        setShowForm(false);
-    };
+
 
     const handleExport = () => {
         const categories = getCategories();
@@ -108,7 +101,7 @@ export default function TransactionsPage() {
                         onChange={(start, end) => setDateRange({ start, end })}
                         dataDateRange={dataDateRange}
                     />
-                    <button onClick={() => setShowForm(true)} className="btn btn-primary">
+                    <button onClick={() => router.push('/transactions/add?returnUrl=/transactions')} className="btn btn-primary">
                         <Plus className="w-4 h-4" />
                         <span className="hidden sm:inline">Thêm</span>
                     </button>
@@ -173,14 +166,12 @@ export default function TransactionsPage() {
                 />
             )}
 
-            {/* Form modal */}
-            {showForm && (
+            {/* Edit form modal - only for editing */}
+            {editingTransaction && (
                 <TransactionForm
                     transaction={editingTransaction}
                     onSubmit={handleSubmit}
-                    onSubmitBatch={handleBatchSubmit}
                     onCancel={() => {
-                        setShowForm(false);
                         setEditingTransaction(undefined);
                     }}
                 />

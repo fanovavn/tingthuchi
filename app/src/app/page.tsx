@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { subMonths, differenceInDays, format } from 'date-fns';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useDateFilter } from '@/hooks/useDateFilter';
@@ -15,20 +16,16 @@ import {
   TopExpenses,
   KeyMetrics,
 } from '@/components/dashboard';
-import { TransactionForm } from '@/components/transactions';
-import { Transaction } from '@/types/transaction';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const {
     transactions,
     loading,
     loadFromExcel,
-    addTransaction,
     getStats,
     filterTransactions,
   } = useTransactions();
-
-  const [showForm, setShowForm] = useState(false);
 
   // Find data date range
   const dataDateRange = useMemo(() => {
@@ -49,11 +46,6 @@ export default function DashboardPage() {
       loadFromExcel('/List-transaction-excel.xlsx');
     }
   }, [loading, transactions.length, loadFromExcel]);
-
-  const handleAddTransaction = (data: Omit<Transaction, 'id'>) => {
-    addTransaction(data);
-    setShowForm(false);
-  };
 
   // Filter transactions by date range
   const filteredTransactions = useMemo(() => {
@@ -162,7 +154,7 @@ export default function DashboardPage() {
             dataDateRange={dataDateRange}
           />
           <button
-            onClick={() => setShowForm(true)}
+            onClick={() => router.push('/transactions/add?returnUrl=/')}
             className="btn btn-primary"
           >
             <Plus className="w-4 h-4" />
@@ -215,14 +207,6 @@ export default function DashboardPage() {
         limit={5}
         dateFilter={dateRange}
       />
-
-      {/* Form modal */}
-      {showForm && (
-        <TransactionForm
-          onSubmit={handleAddTransaction}
-          onCancel={() => setShowForm(false)}
-        />
-      )}
     </div>
   );
 }

@@ -9,6 +9,7 @@ interface TransactionFormProps {
     onSubmit: (data: Omit<Transaction, 'id'>) => void;
     onSubmitBatch?: (data: Omit<Transaction, 'id'>[]) => void;
     onCancel: () => void;
+    mode?: 'modal' | 'page';
 }
 
 const LAST_DATE_KEY = 'ting-last-transaction-date';
@@ -71,7 +72,7 @@ interface FormData {
     description: string;
 }
 
-export function TransactionForm({ transaction, onSubmit, onCancel }: TransactionFormProps) {
+export function TransactionForm({ transaction, onSubmit, onCancel, mode = 'modal' }: TransactionFormProps) {
     const isEditing = !!transaction;
 
     const [formData, setFormData] = useState<FormData>(() => {
@@ -135,118 +136,138 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
             description: formData.description,
         });
 
-        onCancel();
+        // Only call onCancel in modal mode - page mode handles navigation in parent
+        if (mode === 'modal') {
+            onCancel();
+        }
     };
 
-    return (
-        <div className="modal-backdrop" onClick={onCancel}>
-            <div className="modal-content max-w-md" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold">
-                        {isEditing ? 'Sửa Giao Dịch' : 'Thêm Giao Dịch'}
-                    </h2>
-                    <button onClick={onCancel} className="p-2 hover:bg-[var(--color-surface-hover)] rounded-lg">
-                        <X className="w-5 h-5" />
+    // Form content (shared between modal and page modes)
+    const formContent = (
+        <>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Type toggle */}
+                <div className="flex gap-2">
+                    <button
+                        type="button"
+                        onClick={() => updateFormData('type', 'expense')}
+                        className={`flex-1 py-2.5 rounded-lg font-medium transition-colors ${formData.type === 'expense'
+                            ? 'bg-[var(--color-danger)] text-white'
+                            : 'bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)]'
+                            }`}
+                    >
+                        Chi tiêu
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => updateFormData('type', 'income')}
+                        className={`flex-1 py-2.5 rounded-lg font-medium transition-colors ${formData.type === 'income'
+                            ? 'bg-[var(--color-success)] text-white'
+                            : 'bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)]'
+                            }`}
+                    >
+                        Thu nhập
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Type toggle */}
-                    <div className="flex gap-2">
-                        <button
-                            type="button"
-                            onClick={() => updateFormData('type', 'expense')}
-                            className={`flex-1 py-2.5 rounded-lg font-medium transition-colors ${formData.type === 'expense'
-                                ? 'bg-[var(--color-danger)] text-white'
-                                : 'bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)]'
-                                }`}
-                        >
-                            Chi tiêu
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => updateFormData('type', 'income')}
-                            className={`flex-1 py-2.5 rounded-lg font-medium transition-colors ${formData.type === 'income'
-                                ? 'bg-[var(--color-success)] text-white'
-                                : 'bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)]'
-                                }`}
-                        >
-                            Thu nhập
-                        </button>
-                    </div>
+                {/* Amount */}
+                <div>
+                    <label className="block text-xs text-[var(--color-text-muted)] mb-1">
+                        Số tiền (VND) *
+                    </label>
+                    <input
+                        type="text"
+                        inputMode="numeric"
+                        value={formData.amount}
+                        onChange={(e) => updateFormData('amount', e.target.value)}
+                        className="input w-full text-lg font-semibold"
+                        placeholder="0"
+                        autoComplete="off"
+                        autoFocus
+                    />
+                </div>
 
-                    {/* Amount */}
+                {/* Category & Date */}
+                <div className="grid grid-cols-2 gap-3">
                     <div>
                         <label className="block text-xs text-[var(--color-text-muted)] mb-1">
-                            Số tiền (VND) *
+                            Danh mục
                         </label>
-                        <input
-                            type="text"
-                            inputMode="numeric"
-                            value={formData.amount}
-                            onChange={(e) => updateFormData('amount', e.target.value)}
-                            className="input w-full text-lg font-semibold"
-                            placeholder="0"
-                            autoComplete="off"
-                            autoFocus
-                        />
-                    </div>
-
-                    {/* Category & Date */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-xs text-[var(--color-text-muted)] mb-1">
-                                Danh mục
-                            </label>
-                            <select
-                                value={formData.category}
-                                onChange={(e) => updateFormData('category', e.target.value)}
-                                className="input w-full"
-                            >
-                                {getCategoriesForType(formData.type).map((cat) => (
-                                    <option key={cat} value={cat}>{cat}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs text-[var(--color-text-muted)] mb-1">
-                                Ngày
-                            </label>
-                            <input
-                                type="date"
-                                value={formData.date}
-                                onChange={(e) => updateFormData('date', e.target.value)}
-                                className="input w-full"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Description */}
-                    <div>
-                        <label className="block text-xs text-[var(--color-text-muted)] mb-1">
-                            Mô tả
-                        </label>
-                        <input
-                            type="text"
-                            value={formData.description}
-                            onChange={(e) => updateFormData('description', e.target.value)}
+                        <select
+                            value={formData.category}
+                            onChange={(e) => updateFormData('category', e.target.value)}
                             className="input w-full"
-                            placeholder="Nhập mô tả..."
-                            autoComplete="off"
+                        >
+                            {getCategoriesForType(formData.type).map((cat) => (
+                                <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs text-[var(--color-text-muted)] mb-1">
+                            Ngày
+                        </label>
+                        <input
+                            type="date"
+                            value={formData.date}
+                            onChange={(e) => updateFormData('date', e.target.value)}
+                            className="input w-full"
                         />
                     </div>
+                </div>
 
-                    {/* Submit buttons */}
-                    <div className="flex gap-3 pt-4">
-                        <button type="button" onClick={onCancel} className="btn btn-secondary flex-1">
-                            Hủy
-                        </button>
-                        <button type="submit" className="btn btn-primary flex-1">
-                            {isEditing ? 'Cập nhật' : 'Thêm'}
+                {/* Description */}
+                <div>
+                    <label className="block text-xs text-[var(--color-text-muted)] mb-1">
+                        Mô tả
+                    </label>
+                    <input
+                        type="text"
+                        value={formData.description}
+                        onChange={(e) => updateFormData('description', e.target.value)}
+                        className="input w-full"
+                        placeholder="Nhập mô tả..."
+                        autoComplete="off"
+                    />
+                </div>
+
+                {/* Submit buttons */}
+                <div className="flex gap-3 pt-4">
+                    <button type="button" onClick={onCancel} className="btn btn-secondary flex-1">
+                        Hủy
+                    </button>
+                    <button type="submit" className="btn btn-primary flex-1">
+                        {isEditing ? 'Cập nhật' : 'Thêm'}
+                    </button>
+                </div>
+            </form>
+        </>
+    );
+
+    // Modal mode: wrap in backdrop overlay
+    if (mode === 'modal') {
+        return (
+            <div className="modal-backdrop" onClick={onCancel}>
+                <div className="modal-content max-w-md" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-bold">
+                            {isEditing ? 'Sửa Giao Dịch' : 'Thêm Giao Dịch'}
+                        </h2>
+                        <button onClick={onCancel} className="p-2 hover:bg-[var(--color-surface-hover)] rounded-lg">
+                            <X className="w-5 h-5" />
                         </button>
                     </div>
-                </form>
+                    {formContent}
+                </div>
             </div>
+        );
+    }
+
+    // Page mode: render in a glass-card container
+    return (
+        <div className="glass-card p-6">
+            {formContent}
         </div>
     );
 }
