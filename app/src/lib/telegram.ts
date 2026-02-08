@@ -53,7 +53,7 @@ export function formatTransactionMessage(
 ): string {
     const formattedAmount = amount.toLocaleString('vi-VN');
     const sign = type === 'income' ? '+' : '-';
-    const emoji = type === 'income' ? '💰' : '💸';
+    const emoji = type === 'income' ? '💰' : '😕';
     const dateStr = date.toLocaleDateString('vi-VN', {
         day: '2-digit',
         month: '2-digit',
