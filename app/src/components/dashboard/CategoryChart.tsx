@@ -1,11 +1,11 @@
 'use client';
 
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, ChartOptions } from 'chart.js';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, ChartOptions, DoughnutController } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
 import { formatCurrency } from '@/lib/utils';
 import { getCategoryColor } from '@/components/ui/CategoryLabel';
 
-ChartJS.register(ArcElement, Tooltip, Legend);
+ChartJS.register(ArcElement, Tooltip, Legend, DoughnutController);
 
 interface CategoryChartProps {
     data: { category: string; amount: number }[];

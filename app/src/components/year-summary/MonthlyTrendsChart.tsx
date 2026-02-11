@@ -11,6 +11,8 @@ import {
     Tooltip,
     Legend,
     ChartOptions,
+    LineController,
+    BarController,
 } from 'chart.js';
 import { Chart } from 'react-chartjs-2';
 import { formatCurrency } from '@/lib/utils';
@@ -21,6 +23,8 @@ ChartJS.register(
     BarElement,
     LineElement,
     PointElement,
+    LineController,
+    BarController,
     Title,
     Tooltip,
     Legend
