@@ -35,14 +35,15 @@ export function getCategoryColor(category: string) {
 interface CategoryLabelProps {
     category: string;
     size?: 'sm' | 'md';
+    showIcon?: boolean;
 }
 
-export function CategoryLabel({ category, size = 'sm' }: CategoryLabelProps) {
+export function CategoryLabel({ category, size = 'sm', showIcon = false }: CategoryLabelProps) {
     const colors = getCategoryColor(category);
 
     return (
         <span
-            className={`inline-flex items-center rounded-full font-medium whitespace-nowrap ${size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-sm'
+            className={`inline-flex items-center rounded-full font-medium whitespace-nowrap gap-1 ${size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-sm'
                 }`}
             style={{
                 backgroundColor: colors.bg,
@@ -50,6 +51,7 @@ export function CategoryLabel({ category, size = 'sm' }: CategoryLabelProps) {
                 border: `1px solid ${colors.border}`,
             }}
         >
+            {showIcon && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
             {category}
         </span>
     );

@@ -4,6 +4,7 @@ import "./globals.css";
 import { Sidebar, MobileHeader } from "@/components/layout";
 import { AuthWrapper } from "@/components/auth";
 import { ThemeProvider } from "@/components/theme";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,15 +38,17 @@ export default function RootLayout({
     <html lang="vi" suppressHydrationWarning data-theme="light">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider>
-          <AuthWrapper>
-            <div className="app-layout">
-              <Sidebar />
-              <MobileHeader />
-              <main className="main-content">
-                {children}
-              </main>
-            </div>
-          </AuthWrapper>
+          <TooltipProvider>
+            <AuthWrapper>
+              <div className="app-layout">
+                <Sidebar />
+                <MobileHeader />
+                <main className="main-content">
+                  {children}
+                </main>
+              </div>
+            </AuthWrapper>
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

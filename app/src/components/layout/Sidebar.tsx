@@ -8,12 +8,14 @@ import {
     Tag,
     Settings,
     Coins,
+    Calendar,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/transactions', label: 'Giao dịch', icon: Receipt },
     { href: '/categories', label: 'Danh mục', icon: Tag },
+    { href: '/year-summary', label: 'Tổng Kết Năm', icon: Calendar },
 ];
 
 const BOTTOM_NAV_ITEMS = [
@@ -61,7 +63,7 @@ export function Sidebar() {
                     </Link>
                 ))}
                 <div className="px-3 py-2 text-xs text-[var(--color-text-muted)] opacity-50">
-                    v6.1.0
+                    v7.0.0
                 </div>
             </div>
         </aside>
