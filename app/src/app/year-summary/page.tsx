@@ -9,9 +9,16 @@ export default async function YearSummaryPage() {
     // For personal finance (thousands of rows), fetching all is acceptable.
     const transactions = await sheetsDB.getAll();
 
+    // Serialize dates to pass to client component
+    const serializedTransactions = transactions.map(t => ({
+        ...t,
+        date: t.date.toISOString(),
+        // amount: t.amount // number is fine
+    }));
+
     return (
         <div className="pb-32">
-            <YearSummaryClient transactions={transactions} />
+            <YearSummaryClient transactions={serializedTransactions as any} />
         </div>
     );
 }
