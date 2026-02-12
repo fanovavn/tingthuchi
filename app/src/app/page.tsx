@@ -188,6 +188,13 @@ export default function DashboardPage() {
       {/* Summary Cards */}
       <SummaryCards stats={stats} loading={loading} />
 
+      {/* Daily Transactions Table - Full width */}
+      <DailyTransactionsTable
+        data={trendData}
+        title="Thu Chi Theo Ngày"
+        onRowClick={(date) => setSelectedDate(date)}
+      />
+
       {/* Category Charts - Side by side */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
         <IncomeCategoryChart
@@ -217,12 +224,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Daily Transactions Table - Full width */}
-      <DailyTransactionsTable
-        data={trendData}
-        title="Thu Chi Theo Ngày"
-        onRowClick={(date) => setSelectedDate(date)}
-      />
+
 
       {/* Recent Transactions */}
       <RecentTransactions

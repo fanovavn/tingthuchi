@@ -63,7 +63,7 @@ export function Sidebar() {
                     </Link>
                 ))}
                 <div className="px-3 py-2 text-xs text-[var(--color-text-muted)] opacity-50">
-                    v7.0.0
+                    v7.1.0
                 </div>
             </div>
         </aside>
