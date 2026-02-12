@@ -2,6 +2,14 @@
 
 Các thay đổi đáng chú ý của dự án sẽ được ghi lại trong tệp này.
 
+## [v7.1.0] - 2026-02-12
+
+### Thay đổi (Changed)
+- **Bảng Giao Dịch Hàng Ngày**:
+  - Cập nhật giao diện để nổi bật dòng của **Ngày Hiện Tại** thay vì luôn là dòng đầu tiên.
+  - Tăng độ bo tròn góc (`border-radius: 8px`) cho dòng được chọn.
+  - Sử dụng viền tím đậm hơn (`border-purple-600`) cho chế độ sáng để tăng độ tương phản.
+
 ## [v7.0.0] - 2026-02-11
 
 ### Thêm mới (Added)
