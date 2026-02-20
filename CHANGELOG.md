@@ -2,6 +2,21 @@
 
 Các thay đổi đáng chú ý của dự án sẽ được ghi lại trong tệp này.
 
+## [v8.1.0] - 2026-02-20
+
+### Thêm mới (Added)
+- **Nhóm giao dịch theo ngày**: Danh sách giao dịch được nhóm theo ngày với header hiển thị:
+  - Ngày tháng và thứ trong tuần (VD: 20/02/2026 - thứ sáu).
+  - Tổng thu và tổng chi trong ngày.
+  - Badge "Hôm nay" nổi bật cho ngày hiện tại.
+
+### Thay đổi (Changed)
+- **Header ngày hôm nay**: Nền tím đậm với chữ trắng cho dễ đọc.
+- **Font size số tiền**: Tăng lên 24px trong form giao dịch & tiết kiệm.
+
+### Sửa lỗi (Fixed)
+- **Ngày ghi vào Google Sheet**: Sửa lỗi ngày bị chuyển thành số serial (46054) bằng cách thêm prefix text.
+
 ## [v8.0.0] - 2026-02-20
 
 ### Thêm mới (Added)
