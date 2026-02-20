@@ -2,6 +2,30 @@
 
 Các thay đổi đáng chú ý của dự án sẽ được ghi lại trong tệp này.
 
+## [v8.0.0] - 2026-02-20
+
+### Thêm mới (Added)
+- **Trang Tiết Kiệm** (`/savings`): Quản lý giao dịch gửi vào & rút ra tiết kiệm.
+  - Thống kê: Tổng gửi vào, Tổng rút ra, Số dư thực tế.
+  - Danh sách giao dịch tiết kiệm, sắp xếp theo ngày mới nhất.
+  - Form thêm/sửa giao dịch tiết kiệm với format số tiền VND (dấu chấm).
+  - Xem chi tiết, sửa và xóa giao dịch.
+  - Lọc giao dịch theo năm.
+- **Tích hợp Google Sheets**: Kết nối tab "Saving" để đọc/ghi dữ liệu tiết kiệm (CRUD).
+- **Thông báo Telegram**: Tự động gửi tin nhắn khi thêm giao dịch tiết kiệm.
+  - Gửi vào: 🚀 Gửi tiết kiệm + số tiền → số dư thực tế.
+  - Rút ra: 🆘 Rút tiết kiệm - số tiền → số dư còn lại.
+- **Menu Tiết kiệm**: Thêm mục "Tiết kiệm" (PiggyBank icon) vào Sidebar & MobileHeader.
+
+### Thay đổi (Changed)
+- **Font size số tiền**: Tăng lên 24px trong form giao dịch & tiết kiệm để nổi bật hơn.
+- **Format số tiền VND**: Hiển thị dấu chấm phân cách hàng nghìn (50.000) trong ô nhập liệu.
+
+### Sửa lỗi (Fixed)
+- **Ngày bị chuyển thành số serial**: Sửa lỗi Google Sheets tự chuyển ngày `20/02/2026` thành số `46054`.
+- **Xử lý lỗi API**: Cải thiện hiển thị lỗi khi tương tác Google Sheets (alert chi tiết thay vì lỗi chung).
+- **Format ngày Telegram**: Đổi từ `dd-mm` sang `dd/mm/yyyy`.
+
 ## [v7.1.0] - 2026-02-12
 
 ### Thay đổi (Changed)
