@@ -61,3 +61,25 @@ export function formatTransactionMessage(
 
     return `${emoji} ${sign}${formattedAmount}₫ : ${description || 'Không có mô tả'}\n(${dateStr} - ${category})`;
 }
+
+// Format saving transaction for Telegram message
+export function formatSavingMessage(
+    amount: number,
+    type: 'deposit' | 'withdraw',
+    note: string,
+    balance: number
+): string {
+    const formattedAmount = amount.toLocaleString('vi-VN');
+    const formattedBalance = balance.toLocaleString('vi-VN');
+    const today = new Date().toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+    });
+
+    if (type === 'deposit') {
+        return `🚀 Gửi tiết kiệm\n+ ${formattedAmount}₫${note ? ' (' + note + ')' : ''}\n→ Ngày ${today} thực tế có: ${formattedBalance}₫`;
+    } else {
+        return `🆘 Rút tiết kiệm\n- ${formattedAmount}₫${note ? ' (' + note + ')' : ''}\n→ Ngày ${today} thực tế còn: ${formattedBalance}₫`;
+    }
+}

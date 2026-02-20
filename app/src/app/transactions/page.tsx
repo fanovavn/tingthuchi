@@ -163,6 +163,11 @@ export default function TransactionsPage() {
                 <TransactionDetail
                     transaction={viewingTransaction}
                     onClose={() => setViewingTransaction(undefined)}
+                    onEdit={handleEdit}
+                    onDelete={(id) => {
+                        deleteTransaction(id);
+                        setViewingTransaction(undefined);
+                    }}
                 />
             )}
 

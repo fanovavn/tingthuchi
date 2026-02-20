@@ -155,7 +155,7 @@ export default function SettingsPage() {
                         className="btn btn-secondary w-full justify-start"
                     >
                         <Lock className="w-4 h-4" />
-                        Đổi mật khẩu
+                        Đổi mã PIN
                     </button>
                     <button
                         onClick={handleLogout}

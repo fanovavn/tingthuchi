@@ -1,26 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { Transaction } from '@/types/transaction';
+import { SavingTransaction } from '@/types/saving';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { X, ArrowUpRight, ArrowDownRight, Calendar, Tag, FileText, Edit2, Trash2 } from 'lucide-react';
-import { CategoryLabel } from '@/components/ui/CategoryLabel';
-import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
+import { X, ArrowDownToLine, ArrowUpFromLine, Calendar, FileText, Edit2, Trash2 } from 'lucide-react';
+import { ConfirmDeleteDialog } from '@/components/transactions/ConfirmDeleteDialog';
 
-interface TransactionDetailProps {
-    transaction: Transaction;
+interface SavingDetailProps {
+    saving: SavingTransaction;
     onClose: () => void;
-    onEdit?: (transaction: Transaction) => void;
+    onEdit?: (saving: SavingTransaction) => void;
     onDelete?: (id: string) => void;
 }
 
-export function TransactionDetail({ transaction, onClose, onEdit, onDelete }: TransactionDetailProps) {
-    const isIncome = transaction.type === 'income';
+export function SavingDetail({ saving, onClose, onEdit, onDelete }: SavingDetailProps) {
+    const isDeposit = saving.type === 'deposit';
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const handleEdit = () => {
         onClose();
-        onEdit?.(transaction);
+        onEdit?.(saving);
     };
 
     const handleDelete = () => {
@@ -28,7 +27,7 @@ export function TransactionDetail({ transaction, onClose, onEdit, onDelete }: Tr
     };
 
     const handleConfirmDelete = () => {
-        onDelete?.(transaction.id);
+        onDelete?.(saving.id);
         setShowDeleteConfirm(false);
         onClose();
     };
@@ -38,7 +37,7 @@ export function TransactionDetail({ transaction, onClose, onEdit, onDelete }: Tr
             <div className="modal-backdrop" onClick={onClose}>
                 <div className="modal-content max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-xl font-bold">Chi Tiết Giao Dịch</h2>
+                        <h2 className="text-xl font-bold">Chi Tiết Tiết Kiệm</h2>
                         <button
                             onClick={onClose}
                             className="p-2 hover:bg-[var(--color-surface-hover)] rounded-lg"
@@ -50,56 +49,49 @@ export function TransactionDetail({ transaction, onClose, onEdit, onDelete }: Tr
                     {/* Amount display */}
                     <div className="text-center mb-8">
                         <div
-                            className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${isIncome ? 'bg-[var(--color-success-bg)]' : 'bg-[var(--color-danger-bg)]'
+                            className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${isDeposit ? 'bg-[var(--color-success-bg)]' : 'bg-[var(--color-danger-bg)]'
                                 }`}
                         >
-                            {isIncome ? (
-                                <ArrowUpRight className="w-8 h-8 text-[var(--color-success)]" />
+                            {isDeposit ? (
+                                <ArrowDownToLine className="w-8 h-8 text-[var(--color-success)]" />
                             ) : (
-                                <ArrowDownRight className="w-8 h-8 text-[var(--color-danger)]" />
+                                <ArrowUpFromLine className="w-8 h-8 text-[var(--color-danger)]" />
                             )}
                         </div>
                         <div
-                            className={`text-3xl font-bold mb-2 ${isIncome ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'
+                            className={`text-3xl font-bold mb-2 ${isDeposit ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'
                                 }`}
                         >
-                            {isIncome ? '+' : '-'}{formatCurrency(transaction.amount)}
+                            {isDeposit ? '+' : '-'}{formatCurrency(saving.amount)}
                         </div>
                         <span
-                            className={`inline-block px-3 py-1 rounded-full text-sm ${isIncome ? 'bg-[var(--color-success-bg)] text-[var(--color-success)]' : 'bg-[var(--color-danger-bg)] text-[var(--color-danger)]'
+                            className={`inline-block px-3 py-1 rounded-full text-sm ${isDeposit
+                                    ? 'bg-[var(--color-success-bg)] text-[var(--color-success)]'
+                                    : 'bg-[var(--color-danger-bg)] text-[var(--color-danger)]'
                                 }`}
                         >
-                            {isIncome ? 'Thu nhập' : 'Chi tiêu'}
+                            {isDeposit ? 'Gửi vào' : 'Rút ra'}
                         </span>
                     </div>
 
                     {/* Details */}
                     <div className="space-y-4">
-                        {/* Category */}
-                        <div className="flex items-start gap-3 p-3 bg-[var(--color-surface-hover)] rounded-lg">
-                            <Tag className="w-5 h-5 text-[var(--color-text-muted)] mt-0.5" />
-                            <div className="flex-1">
-                                <p className="text-xs text-[var(--color-text-muted)] mb-1">Danh mục</p>
-                                <CategoryLabel category={transaction.category} size="md" />
-                            </div>
-                        </div>
-
                         {/* Date */}
                         <div className="flex items-start gap-3 p-3 bg-[var(--color-surface-hover)] rounded-lg">
                             <Calendar className="w-5 h-5 text-[var(--color-text-muted)] mt-0.5" />
                             <div className="flex-1">
                                 <p className="text-xs text-[var(--color-text-muted)] mb-1">Ngày</p>
-                                <p className="font-medium">{formatDate(transaction.date)}</p>
+                                <p className="font-medium">{formatDate(saving.date)}</p>
                             </div>
                         </div>
 
-                        {/* Description */}
-                        {transaction.description && (
+                        {/* Note */}
+                        {saving.note && (
                             <div className="flex items-start gap-3 p-3 bg-[var(--color-surface-hover)] rounded-lg">
                                 <FileText className="w-5 h-5 text-[var(--color-text-muted)] mt-0.5" />
                                 <div className="flex-1">
-                                    <p className="text-xs text-[var(--color-text-muted)] mb-1">Mô tả</p>
-                                    <p className="font-medium">{transaction.description}</p>
+                                    <p className="text-xs text-[var(--color-text-muted)] mb-1">Ghi chú</p>
+                                    <p className="font-medium">{saving.note}</p>
                                 </div>
                             </div>
                         )}
@@ -132,11 +124,12 @@ export function TransactionDetail({ transaction, onClose, onEdit, onDelete }: Tr
                 </div>
             </div>
 
-            {/* Delete confirmation dialog */}
             <ConfirmDeleteDialog
                 open={showDeleteConfirm}
                 onOpenChange={(open) => !open && setShowDeleteConfirm(false)}
                 onConfirm={handleConfirmDelete}
+                title="Xóa giao dịch tiết kiệm?"
+                description="Hành động này không thể hoàn tác. Bạn có chắc chắn muốn xóa giao dịch tiết kiệm này không?"
             />
         </>
     );

@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import { Transaction } from '@/types/transaction';
+import { SavingTransaction } from '@/types/saving';
 import { generateId } from './utils';
 import { format } from 'date-fns';
 
@@ -278,3 +279,155 @@ export class GoogleSheetsDB {
 }
 
 export const sheetsDB = new GoogleSheetsDB();
+
+// ── Saving Sheet DB ──────────────────────────────────────────────────────
+const SAVING_SHEET_NAME = 'Saving';
+
+export class SavingSheetsDB {
+    async getAll(): Promise<SavingTransaction[]> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) {
+            throw new Error('Chưa cấu hình Google Spreadsheet ID.');
+        }
+
+        const sheets = getSheets();
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${SAVING_SHEET_NAME}!A:E`,
+        });
+
+        const rows = response.data.values;
+        if (!rows || rows.length <= 1) return [];
+
+        const dataRows = rows.slice(1);
+        const savings: SavingTransaction[] = [];
+
+        for (const row of dataRows) {
+            const [dateStr, amountStr, note, typeStr, id] = row;
+            if (!dateStr && !amountStr) continue;
+
+            savings.push({
+                id: id || generateId(),
+                date: parseSheetDate(dateStr),
+                amount: parseAmount(amountStr),
+                note: note || '',
+                type: typeStr === 'Gửi vào' ? 'deposit' : 'withdraw',
+            });
+        }
+
+        savings.sort((a, b) => b.date.getTime() - a.date.getTime());
+        return savings;
+    }
+
+    async add(saving: Omit<SavingTransaction, 'id'>): Promise<SavingTransaction> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID');
+
+        const sheets = getSheets();
+        const newId = generateId();
+
+        const newRow = [
+            `'${formatDateForSheet(new Date(saving.date))}`,
+            saving.amount,
+            saving.note,
+            saving.type === 'deposit' ? 'Gửi vào' : 'Rút ra',
+            newId,
+        ];
+
+        await sheets.spreadsheets.values.append({
+            spreadsheetId,
+            range: `${SAVING_SHEET_NAME}!A:E`,
+            valueInputOption: 'USER_ENTERED',
+            insertDataOption: 'INSERT_ROWS',
+            requestBody: { values: [newRow] },
+        });
+
+        return { ...saving, date: new Date(saving.date), id: newId };
+    }
+
+    async update(id: string, updates: Partial<SavingTransaction>): Promise<void> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID');
+
+        const sheets = getSheets();
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${SAVING_SHEET_NAME}!A:E`,
+        });
+
+        const rows = response.data.values;
+        if (!rows) throw new Error('No data found in sheet');
+
+        let rowIndex = -1;
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i][4] === id) {
+                rowIndex = i + 1;
+                break;
+            }
+        }
+        if (rowIndex === -1) throw new Error(`Saving with ID ${id} not found`);
+
+        const currentRow = rows[rowIndex - 1];
+        const updatedRow = [
+            updates.date ? `'${formatDateForSheet(new Date(updates.date))}` : currentRow[0],
+            updates.amount !== undefined ? updates.amount : currentRow[1],
+            updates.note !== undefined ? updates.note : currentRow[2],
+            updates.type ? (updates.type === 'deposit' ? 'Gửi vào' : 'Rút ra') : currentRow[3],
+            id,
+        ];
+
+        await sheets.spreadsheets.values.update({
+            spreadsheetId,
+            range: `${SAVING_SHEET_NAME}!A${rowIndex}:E${rowIndex}`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: { values: [updatedRow] },
+        });
+    }
+
+    async delete(id: string): Promise<void> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID');
+
+        const sheets = getSheets();
+        const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+        const sheet = spreadsheet.data.sheets?.find(
+            s => s.properties?.title === SAVING_SHEET_NAME
+        );
+        if (!sheet?.properties?.sheetId) throw new Error(`Sheet ${SAVING_SHEET_NAME} not found`);
+
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${SAVING_SHEET_NAME}!A:E`,
+        });
+
+        const rows = response.data.values;
+        if (!rows) throw new Error('No data found in sheet');
+
+        let rowIndex = -1;
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i][4] === id) {
+                rowIndex = i;
+                break;
+            }
+        }
+        if (rowIndex === -1) throw new Error(`Saving with ID ${id} not found`);
+
+        await sheets.spreadsheets.batchUpdate({
+            spreadsheetId,
+            requestBody: {
+                requests: [{
+                    deleteDimension: {
+                        range: {
+                            sheetId: sheet.properties.sheetId,
+                            dimension: 'ROWS',
+                            startIndex: rowIndex,
+                            endIndex: rowIndex + 1,
+                        },
+                    },
+                }],
+            },
+        });
+    }
+}
+
+export const savingSheetsDB = new SavingSheetsDB();

@@ -183,7 +183,7 @@ export function TransactionForm({ transaction, onSubmit, onCancel, mode = 'modal
                         inputMode="numeric"
                         value={formData.amount}
                         onChange={(e) => updateFormData('amount', e.target.value)}
-                        className="input w-full text-lg font-semibold"
+                        className="input w-full font-semibold" style={{ fontSize: '24px' }}
                         placeholder="0"
                         autoComplete="off"
                         autoFocus

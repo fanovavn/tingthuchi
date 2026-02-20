@@ -190,6 +190,8 @@ export function TransactionTable({
                 <TransactionDetail
                     transaction={viewingTransaction}
                     onClose={() => setViewingTransaction(null)}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
                 />
             )}
         </>

@@ -9,11 +9,13 @@ import {
     Settings,
     Coins,
     Calendar,
+    PiggyBank,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/transactions', label: 'Giao dịch', icon: Receipt },
+    { href: '/savings', label: 'Tiết kiệm', icon: PiggyBank },
     { href: '/categories', label: 'Danh mục', icon: Tag },
     { href: '/year-summary', label: 'Tổng Kết Năm', icon: Calendar },
 ];
