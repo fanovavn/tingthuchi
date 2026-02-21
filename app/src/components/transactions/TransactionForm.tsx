@@ -1,8 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
-import { Transaction, CATEGORIES } from '@/types/transaction';
+import { Transaction } from '@/types/transaction';
+
+interface ApiCategory {
+    id: string;
+    name: string;
+    type: 'income' | 'expense';
+    color: string;
+}
 
 interface TransactionFormProps {
     transaction?: Transaction;
@@ -17,10 +24,6 @@ const LAST_CATEGORY_KEY = 'ting-last-transaction-category';
 const LAST_TYPE_KEY = 'ting-last-transaction-type';
 
 const getLastDate = (): string => {
-    if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem(LAST_DATE_KEY);
-        if (saved) return saved;
-    }
     return new Date().toISOString().slice(0, 10);
 };
 
@@ -51,13 +54,11 @@ const saveLastSelections = (date: string, category: string, type: 'income' | 'ex
     }
 };
 
-const getCategoriesForType = (type: 'income' | 'expense') => {
-    if (type === 'income') {
-        const incomeCats = ['Lương tháng', 'Freelancer', 'Được tặng', 'Khoản thu khác'];
-        return incomeCats.sort((a, b) => a.localeCompare(b, 'vi'));
-    }
-    const expenseCats = CATEGORIES.filter(c => !['Lương tháng', 'Freelancer', 'Được tặng', 'Khoản thu khác'].includes(c));
-    return expenseCats.sort((a, b) => a.localeCompare(b, 'vi'));
+const getCategoriesForType = (type: 'income' | 'expense', apiCategories: ApiCategory[]) => {
+    return apiCategories
+        .filter(c => c.type === type)
+        .map(c => c.name)
+        .sort((a, b) => a.localeCompare(b, 'vi'));
 };
 
 const formatAmountInput = (value: string): string => {
@@ -76,6 +77,17 @@ interface FormData {
 
 export function TransactionForm({ transaction, onSubmit, onCancel, mode = 'modal' }: TransactionFormProps) {
     const isEditing = !!transaction;
+    const [apiCategories, setApiCategories] = useState<ApiCategory[]>([]);
+
+    // Fetch categories from API
+    useEffect(() => {
+        fetch('/api/categories')
+            .then(res => res.json())
+            .then((data: ApiCategory[]) => {
+                if (Array.isArray(data)) setApiCategories(data);
+            })
+            .catch(err => console.error('Failed to fetch categories:', err));
+    }, []);
 
     const [formData, setFormData] = useState<FormData>(() => {
         if (transaction) {
@@ -97,15 +109,23 @@ export function TransactionForm({ transaction, onSubmit, onCancel, mode = 'modal
         };
     });
 
+    // Update category when apiCategories loads and current category is not in the list
+    useEffect(() => {
+        if (apiCategories.length === 0) return;
+        const cats = getCategoriesForType(formData.type, apiCategories);
+        if (cats.length > 0 && !cats.includes(formData.category)) {
+            setFormData(prev => ({ ...prev, category: cats[0] }));
+        }
+    }, [apiCategories]); // eslint-disable-line react-hooks/exhaustive-deps
+
     const updateFormData = (field: keyof FormData, value: string) => {
         setFormData(prev => {
             const updated = { ...prev, [field]: value };
             if (field === 'type') {
                 const newType = value as 'income' | 'expense';
-                const cats = getCategoriesForType(newType);
-                // Try to use last saved category for this type, or default to first
+                const cats = getCategoriesForType(newType, apiCategories);
                 const savedCategory = getLastCategory(newType);
-                updated.category = cats.includes(savedCategory) ? savedCategory : cats[0];
+                updated.category = cats.includes(savedCategory) ? savedCategory : (cats[0] || '');
             }
             if (field === 'amount') {
                 updated.amount = formatAmountInput(value);
@@ -201,7 +221,7 @@ export function TransactionForm({ transaction, onSubmit, onCancel, mode = 'modal
                             onChange={(e) => updateFormData('category', e.target.value)}
                             className="input w-full"
                         >
-                            {getCategoriesForType(formData.type).map((cat) => (
+                            {getCategoriesForType(formData.type, apiCategories).map((cat) => (
                                 <option key={cat} value={cat}>{cat}</option>
                             ))}
                         </select>

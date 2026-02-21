@@ -2,6 +2,30 @@
 
 Các thay đổi đáng chú ý của dự án sẽ được ghi lại trong tệp này.
 
+## [v8.2.0] - 2026-02-21
+
+### Thêm mới (Added)
+- **Tích hợp Google Sheets cho Danh mục**: Kết nối trang "Danh mục" với tab "Category" trên Google Sheets.
+  - CRUD đầy đủ: Thêm, sửa, xóa danh mục đồng bộ trực tiếp với Google Sheets.
+  - Cấu trúc sheet: ID | Tên danh mục | Nhóm danh mục | Color.
+  - API routes: `GET/POST /api/categories` và `PUT/DELETE /api/categories/[id]`.
+- **Bộ chọn màu danh mục**: Hỗ trợ chọn màu cho danh mục với 20 preset colors + color picker tùy chỉnh.
+  - Xem trước (preview) label danh mục với màu đã chọn ngay trong form.
+- **Popup xác nhận xóa**: Thay thế cơ chế "bấm 2 lần" bằng modal xác nhận rõ ràng khi xóa danh mục.
+  - Hiển thị tên & màu danh mục sắp xóa, cảnh báo không thể hoàn tác.
+  - Loading state khi đang xử lý xóa.
+
+### Thay đổi (Changed)
+- **Form Thêm Giao Dịch**: Danh mục trong dropdown giờ được load từ Google Sheets API thay vì hardcode.
+  - Tự động phân loại theo Chi tiêu / Thu nhập.
+  - Thêm/sửa/xóa danh mục ở trang Quản lý sẽ tự động cập nhật trong form giao dịch.
+- **Bộ lọc Giao Dịch (FilterBar)**: Dropdown danh mục cũng load từ Google Sheets API.
+- **Cập nhật version**: Hiển thị v8.2.0 trên Sidebar và MobileHeader.
+
+### Sửa lỗi (Fixed)
+- **Mapping cột sai**: Sửa lỗi `CategorySheetsDB` đọc sai thứ tự cột (ID ở cột A, không phải cột D).
+- **Dữ liệu color bị lệch**: Sửa lỗi trường `color` trả về tên nhóm danh mục thay vì mã màu hex.
+
 ## [v8.1.0] - 2026-02-20
 
 ### Thêm mới (Added)

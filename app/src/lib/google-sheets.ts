@@ -431,3 +431,174 @@ export class SavingSheetsDB {
 }
 
 export const savingSheetsDB = new SavingSheetsDB();
+
+// ── Category Sheet DB ────────────────────────────────────────────────────
+// Sheet structure: A = ID | B = Tên danh mục | C = Nhóm danh mục | D = Color
+const CATEGORY_SHEET_NAME = 'Category';
+
+export interface SheetCategory {
+    id: string;
+    name: string;
+    type: 'income' | 'expense';
+    color: string;
+}
+
+export class CategorySheetsDB {
+    async getAll(): Promise<SheetCategory[]> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) {
+            throw new Error('Chưa cấu hình Google Spreadsheet ID.');
+        }
+
+        const sheets = getSheets();
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${CATEGORY_SHEET_NAME}!A:D`,
+        });
+
+        const rows = response.data.values;
+        if (!rows || rows.length <= 1) return [];
+
+        const dataRows = rows.slice(1); // Skip header row
+        const categories: SheetCategory[] = [];
+
+        for (const row of dataRows) {
+            const [id, name, typeStr, color] = row;
+            if (!name) continue;
+
+            categories.push({
+                id: id || generateId(),
+                name: name,
+                type: typeStr === 'Thu nhập' ? 'income' : 'expense',
+                color: color || '#6366f1',
+            });
+        }
+
+        return categories;
+    }
+
+    async add(category: Omit<SheetCategory, 'id'>): Promise<SheetCategory> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID');
+
+        const sheets = getSheets();
+
+        // Get current data to determine next ID
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${CATEGORY_SHEET_NAME}!A:A`,
+        });
+        const rows = response.data.values || [];
+        // Find max numeric ID
+        let maxId = 0;
+        for (let i = 1; i < rows.length; i++) {
+            const num = parseInt(rows[i][0], 10);
+            if (!isNaN(num) && num > maxId) maxId = num;
+        }
+        const newId = String(maxId + 1);
+
+        const newRow = [
+            newId,
+            category.name,
+            category.type === 'income' ? 'Thu nhập' : 'Chi tiêu',
+            category.color || '#6366f1',
+        ];
+
+        await sheets.spreadsheets.values.append({
+            spreadsheetId,
+            range: `${CATEGORY_SHEET_NAME}!A:D`,
+            valueInputOption: 'USER_ENTERED',
+            insertDataOption: 'INSERT_ROWS',
+            requestBody: { values: [newRow] },
+        });
+
+        return { ...category, id: newId };
+    }
+
+    async update(id: string, updates: Partial<SheetCategory>): Promise<void> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID');
+
+        const sheets = getSheets();
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${CATEGORY_SHEET_NAME}!A:D`,
+        });
+
+        const rows = response.data.values;
+        if (!rows) throw new Error('No data found in sheet');
+
+        // Find row by ID (column A)
+        let rowIndex = -1;
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i][0] === id) {
+                rowIndex = i + 1; // 1-indexed for Sheets API
+                break;
+            }
+        }
+        if (rowIndex === -1) throw new Error(`Category with ID ${id} not found`);
+
+        const currentRow = rows[rowIndex - 1];
+        const updatedRow = [
+            id,
+            updates.name || currentRow[1],
+            updates.type ? (updates.type === 'income' ? 'Thu nhập' : 'Chi tiêu') : currentRow[2],
+            updates.color || currentRow[3] || '#6366f1',
+        ];
+
+        await sheets.spreadsheets.values.update({
+            spreadsheetId,
+            range: `${CATEGORY_SHEET_NAME}!A${rowIndex}:D${rowIndex}`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: { values: [updatedRow] },
+        });
+    }
+
+    async delete(id: string): Promise<void> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID');
+
+        const sheets = getSheets();
+        const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+        const sheet = spreadsheet.data.sheets?.find(
+            s => s.properties?.title === CATEGORY_SHEET_NAME
+        );
+        if (!sheet?.properties?.sheetId) throw new Error(`Sheet ${CATEGORY_SHEET_NAME} not found`);
+
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${CATEGORY_SHEET_NAME}!A:D`,
+        });
+
+        const rows = response.data.values;
+        if (!rows) throw new Error('No data found in sheet');
+
+        // Find row by ID (column A)
+        let rowIndex = -1;
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i][0] === id) {
+                rowIndex = i;
+                break;
+            }
+        }
+        if (rowIndex === -1) throw new Error(`Category with ID ${id} not found`);
+
+        await sheets.spreadsheets.batchUpdate({
+            spreadsheetId,
+            requestBody: {
+                requests: [{
+                    deleteDimension: {
+                        range: {
+                            sheetId: sheet.properties.sheetId,
+                            dimension: 'ROWS',
+                            startIndex: rowIndex,
+                            endIndex: rowIndex + 1,
+                        },
+                    },
+                }],
+            },
+        });
+    }
+}
+
+export const categorySheetsDB = new CategorySheetsDB();

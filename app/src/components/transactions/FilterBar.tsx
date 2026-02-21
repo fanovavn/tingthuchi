@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
-import { TransactionFilter, CATEGORIES } from '@/types/transaction';
+import { TransactionFilter } from '@/types/transaction';
 
 interface FilterBarProps {
     onFilterChange: (filters: TransactionFilter) => void;
@@ -14,6 +14,18 @@ export function FilterBar({ onFilterChange }: FilterBarProps) {
         searchQuery: '',
     });
     const [isExpanded, setIsExpanded] = useState(false);
+    const [categories, setCategories] = useState<string[]>([]);
+
+    useEffect(() => {
+        fetch('/api/categories')
+            .then(res => res.json())
+            .then((data) => {
+                if (Array.isArray(data)) {
+                    setCategories(data.map((c: { name: string }) => c.name).sort((a: string, b: string) => a.localeCompare(b, 'vi')));
+                }
+            })
+            .catch(err => console.error('Failed to fetch categories:', err));
+    }, []);
 
     const handleChange = (key: keyof TransactionFilter, value: string | Date | undefined) => {
         const newFilters = { ...filters, [key]: value };
@@ -88,7 +100,7 @@ export function FilterBar({ onFilterChange }: FilterBarProps) {
                             className="input flex-1"
                         >
                             <option value="">Tất cả danh mục</option>
-                            {CATEGORIES.map((cat) => (
+                            {categories.map((cat) => (
                                 <option key={cat} value={cat}>
                                     {cat}
                                 </option>

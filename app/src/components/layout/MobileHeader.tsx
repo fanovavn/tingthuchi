@@ -103,7 +103,7 @@ export function MobileHeader() {
                         </Link>
                     ))}
                     <div className="px-3 py-2 text-xs text-[var(--color-text-muted)] opacity-50">
-                        v7.1.0
+                        v8.2.0
                     </div>
                 </div>
             </aside>

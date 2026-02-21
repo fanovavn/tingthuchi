@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Tag, TrendingUp, TrendingDown } from 'lucide-react';
-import { CategoryLabel, getCategoryColor } from '@/components/ui/CategoryLabel';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Edit2, Trash2, TrendingUp, TrendingDown, Loader2, AlertTriangle } from 'lucide-react';
 
 interface Category {
     id: string;
@@ -11,36 +10,11 @@ interface Category {
     color: string;
 }
 
-const STORAGE_KEY = 'crm-categories';
-
-// Default categories
-const DEFAULT_CATEGORIES: Category[] = [
-    // Expense categories
-    { id: '1', name: 'Ăn uống', type: 'expense', color: '#ef4444' },
-    { id: '2', name: 'Nấu ăn/siêu thị', type: 'expense', color: '#f97316' },
-    { id: '3', name: 'Mua sắm', type: 'expense', color: '#ec4899' },
-    { id: '4', name: 'Sức khoẻ', type: 'expense', color: '#22c55e' },
-    { id: '5', name: 'Hoá đơn (ĐT, net, cc...)', type: 'expense', color: '#3b82f6' },
-    { id: '6', name: 'Trả nợ', type: 'expense', color: '#a855f7' },
-    { id: '7', name: 'Đi lại: Đổ xăng', type: 'expense', color: '#eab308' },
-    { id: '8', name: 'Đi lại: Taxi', type: 'expense', color: '#f59e0b' },
-    { id: '9', name: 'Đi lại: Thuê xe', type: 'expense', color: '#fbbf24' },
-    { id: '10', name: 'Đi lại: Sửa xe', type: 'expense', color: '#a1a1aa' },
-    { id: '11', name: 'Làm đẹp', type: 'expense', color: '#f472b6' },
-    { id: '12', name: 'Tiệc tùng/vui chơi', type: 'expense', color: '#8b5cf6' },
-    { id: '13', name: 'Thú cưng', type: 'expense', color: '#84cc16' },
-    { id: '14', name: 'Học tập', type: 'expense', color: '#06b6d4' },
-    { id: '15', name: 'Làm việc', type: 'expense', color: '#6366f1' },
-    { id: '16', name: 'Quà tặng', type: 'expense', color: '#d946ef' },
-    { id: '17', name: 'Tiền học kitty', type: 'expense', color: '#14b8a6' },
-    { id: '18', name: 'Bảo hiểm', type: 'expense', color: '#64748b' },
-    { id: '19', name: 'Sửa nhà', type: 'expense', color: '#78716c' },
-    { id: '20', name: 'Du lịch', type: 'expense', color: '#0ea5e9' },
-    // Income categories
-    { id: '21', name: 'Lương tháng', type: 'income', color: '#22c55e' },
-    { id: '22', name: 'Freelancer', type: 'income', color: '#10b981' },
-    { id: '23', name: 'Được tặng', type: 'income', color: '#34d399' },
-    { id: '24', name: 'Khoản thu khác', type: 'income', color: '#6ee7b7' },
+const PRESET_COLORS = [
+    '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
+    '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
+    '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
+    '#ec4899', '#f472b6', '#64748b', '#78716c', '#a1a1aa',
 ];
 
 export default function CategoriesPage() {
@@ -49,53 +23,75 @@ export default function CategoriesPage() {
     const [showForm, setShowForm] = useState(false);
     const [editingCategory, setEditingCategory] = useState<Category | undefined>();
     const [formData, setFormData] = useState({ name: '', type: 'expense' as 'income' | 'expense', color: '#6366f1' });
-    const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+    const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    // Load categories from localStorage
-    useEffect(() => {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            try {
-                setCategories(JSON.parse(stored));
-            } catch {
-                setCategories(DEFAULT_CATEGORIES);
+    // Load categories from API
+    const fetchCategories = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const res = await fetch('/api/categories');
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to fetch categories');
             }
-        } else {
-            setCategories(DEFAULT_CATEGORIES);
+            const data = await res.json();
+            setCategories(data);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Lỗi khi tải danh mục');
+            console.error('Failed to fetch categories:', err);
+        } finally {
+            setLoading(false);
         }
     }, []);
 
-    // Save to localStorage
     useEffect(() => {
-        if (categories.length > 0) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(categories));
-        }
-    }, [categories]);
+        fetchCategories();
+    }, [fetchCategories]);
 
     const filteredCategories = categories.filter((c) => c.type === activeTab);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (editingCategory) {
-            setCategories((prev) =>
-                prev.map((c) =>
-                    c.id === editingCategory.id
-                        ? { ...c, name: formData.name, type: formData.type, color: formData.color }
-                        : c
-                )
-            );
-        } else {
-            const newCategory: Category = {
-                id: Date.now().toString(),
-                name: formData.name,
-                type: formData.type,
-                color: formData.color,
-            };
-            setCategories((prev) => [...prev, newCategory]);
+        setSaving(true);
+        try {
+            if (editingCategory) {
+                const res = await fetch(`/api/categories/${editingCategory.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: formData.name,
+                        type: formData.type,
+                        color: formData.color,
+                    }),
+                });
+                if (!res.ok) throw new Error('Failed to update category');
+            } else {
+                const res = await fetch('/api/categories', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: formData.name,
+                        type: formData.type,
+                        color: formData.color,
+                    }),
+                });
+                if (!res.ok) throw new Error('Failed to add category');
+            }
+            await fetchCategories();
+            setShowForm(false);
+            setEditingCategory(undefined);
+            setFormData({ name: '', type: 'expense', color: '#6366f1' });
+        } catch (err) {
+            console.error('Failed to save category:', err);
+            alert(err instanceof Error ? err.message : 'Lỗi khi lưu danh mục');
+        } finally {
+            setSaving(false);
         }
-        setShowForm(false);
-        setEditingCategory(undefined);
-        setFormData({ name: '', type: 'expense', color: '#6366f1' });
     };
 
     const handleEdit = (category: Category) => {
@@ -104,13 +100,19 @@ export default function CategoriesPage() {
         setShowForm(true);
     };
 
-    const handleDelete = (id: string) => {
-        if (deleteConfirm === id) {
-            setCategories((prev) => prev.filter((c) => c.id !== id));
-            setDeleteConfirm(null);
-        } else {
-            setDeleteConfirm(id);
-            setTimeout(() => setDeleteConfirm(null), 3000);
+    const handleDeleteConfirm = async () => {
+        if (!deletingCategory) return;
+        setIsDeleting(true);
+        try {
+            const res = await fetch(`/api/categories/${deletingCategory.id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Failed to delete category');
+            await fetchCategories();
+            setDeletingCategory(null);
+        } catch (err) {
+            console.error('Failed to delete category:', err);
+            alert(err instanceof Error ? err.message : 'Lỗi khi xóa danh mục');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -119,13 +121,6 @@ export default function CategoriesPage() {
         setFormData({ name: '', type: activeTab, color: '#6366f1' });
         setShowForm(true);
     };
-
-    const PRESET_COLORS = [
-        '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
-        '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
-        '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
-        '#ec4899', '#f472b6', '#64748b', '#78716c', '#a1a1aa',
-    ];
 
     return (
         <div className="space-y-6">
@@ -148,8 +143,8 @@ export default function CategoriesPage() {
                 <button
                     onClick={() => setActiveTab('expense')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'expense'
-                            ? 'bg-[var(--color-danger)] text-white'
-                            : 'bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]'
+                        ? 'bg-[var(--color-danger)] text-white'
+                        : 'bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]'
                         }`}
                 >
                     <TrendingDown className="w-4 h-4" />
@@ -158,8 +153,8 @@ export default function CategoriesPage() {
                 <button
                     onClick={() => setActiveTab('income')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'income'
-                            ? 'bg-[var(--color-success)] text-white'
-                            : 'bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]'
+                        ? 'bg-[var(--color-success)] text-white'
+                        : 'bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]'
                         }`}
                 >
                     <TrendingUp className="w-4 h-4" />
@@ -167,9 +162,21 @@ export default function CategoriesPage() {
                 </button>
             </div>
 
+            {/* Error */}
+            {error && (
+                <div className="p-4 rounded-lg bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 text-[var(--color-danger)]">
+                    {error}
+                </div>
+            )}
+
             {/* Category list */}
             <div className="glass-card overflow-hidden">
-                {filteredCategories.length === 0 ? (
+                {loading ? (
+                    <div className="p-12 text-center text-[var(--color-text-muted)] flex flex-col items-center gap-2">
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                        Đang tải danh mục...
+                    </div>
+                ) : filteredCategories.length === 0 ? (
                     <div className="p-12 text-center text-[var(--color-text-muted)]">
                         Chưa có danh mục nào
                     </div>
@@ -205,19 +212,11 @@ export default function CategoriesPage() {
                                         <Edit2 className="w-4 h-4 text-[var(--color-text-secondary)]" />
                                     </button>
                                     <button
-                                        onClick={() => handleDelete(category.id)}
-                                        className={`p-2 rounded-lg transition-colors ${deleteConfirm === category.id
-                                                ? 'bg-[var(--color-danger)] text-white'
-                                                : 'hover:bg-[var(--color-surface)]'
-                                            }`}
-                                        title={deleteConfirm === category.id ? 'Nhấn lần nữa để xóa' : 'Xóa'}
+                                        onClick={() => setDeletingCategory(category)}
+                                        className="p-2 rounded-lg transition-colors hover:bg-[var(--color-surface)]"
+                                        title="Xóa"
                                     >
-                                        <Trash2
-                                            className={`w-4 h-4 ${deleteConfirm === category.id
-                                                    ? 'text-white'
-                                                    : 'text-[var(--color-text-secondary)]'
-                                                }`}
-                                        />
+                                        <Trash2 className="w-4 h-4 text-[var(--color-text-secondary)]" />
                                     </button>
                                 </div>
                             </div>
@@ -237,16 +236,14 @@ export default function CategoriesPage() {
                         <form onSubmit={handleSubmit} className="space-y-4">
                             {/* Type */}
                             <div>
-                                <label className="block text-sm text-[var(--color-text-secondary)] mb-2">
-                                    Loại
-                                </label>
+                                <label className="block text-sm text-[var(--color-text-secondary)] mb-2">Loại</label>
                                 <div className="flex gap-2">
                                     <button
                                         type="button"
                                         onClick={() => setFormData({ ...formData, type: 'expense' })}
                                         className={`flex-1 py-3 rounded-lg font-medium transition-colors ${formData.type === 'expense'
-                                                ? 'bg-[var(--color-danger)] text-white'
-                                                : 'bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)]'
+                                            ? 'bg-[var(--color-danger)] text-white'
+                                            : 'bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)]'
                                             }`}
                                     >
                                         Chi tiêu
@@ -255,8 +252,8 @@ export default function CategoriesPage() {
                                         type="button"
                                         onClick={() => setFormData({ ...formData, type: 'income' })}
                                         className={`flex-1 py-3 rounded-lg font-medium transition-colors ${formData.type === 'income'
-                                                ? 'bg-[var(--color-success)] text-white'
-                                                : 'bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)]'
+                                            ? 'bg-[var(--color-success)] text-white'
+                                            : 'bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)]'
                                             }`}
                                     >
                                         Thu nhập
@@ -266,9 +263,7 @@ export default function CategoriesPage() {
 
                             {/* Name */}
                             <div>
-                                <label className="block text-sm text-[var(--color-text-secondary)] mb-2">
-                                    Tên danh mục
-                                </label>
+                                <label className="block text-sm text-[var(--color-text-secondary)] mb-2">Tên danh mục</label>
                                 <input
                                     type="text"
                                     value={formData.name}
@@ -276,14 +271,13 @@ export default function CategoriesPage() {
                                     className="input"
                                     placeholder="Nhập tên danh mục..."
                                     required
+                                    autoFocus
                                 />
                             </div>
 
                             {/* Color */}
                             <div>
-                                <label className="block text-sm text-[var(--color-text-secondary)] mb-2">
-                                    Màu sắc
-                                </label>
+                                <label className="block text-sm text-[var(--color-text-secondary)] mb-2">Màu sắc</label>
                                 <div className="grid grid-cols-10 gap-2 mb-3">
                                     {PRESET_COLORS.map((color) => (
                                         <button
@@ -311,9 +305,7 @@ export default function CategoriesPage() {
 
                             {/* Preview */}
                             <div>
-                                <label className="block text-sm text-[var(--color-text-secondary)] mb-2">
-                                    Xem trước
-                                </label>
+                                <label className="block text-sm text-[var(--color-text-secondary)] mb-2">Xem trước</label>
                                 <span
                                     className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
                                     style={{
@@ -335,11 +327,65 @@ export default function CategoriesPage() {
                                 >
                                     Hủy
                                 </button>
-                                <button type="submit" className="btn btn-primary flex-1">
-                                    {editingCategory ? 'Cập nhật' : 'Thêm'}
+                                <button type="submit" className="btn btn-primary flex-1" disabled={saving}>
+                                    {saving ? (
+                                        <><Loader2 className="w-4 h-4 animate-spin" /> Đang lưu...</>
+                                    ) : (
+                                        editingCategory ? 'Cập nhật' : 'Thêm'
+                                    )}
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete confirmation modal */}
+            {deletingCategory && (
+                <div className="modal-backdrop" onClick={() => !isDeleting && setDeletingCategory(null)}>
+                    <div className="modal-content max-w-sm" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex flex-col items-center text-center">
+                            <div className="w-14 h-14 rounded-full bg-[var(--color-danger)]/15 flex items-center justify-center mb-4">
+                                <AlertTriangle className="w-7 h-7 text-[var(--color-danger)]" />
+                            </div>
+                            <h2 className="text-lg font-bold mb-2">Xóa danh mục?</h2>
+                            <p className="text-[var(--color-text-muted)] mb-1">
+                                Bạn có chắc muốn xóa danh mục
+                            </p>
+                            <span
+                                className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium mb-4"
+                                style={{
+                                    backgroundColor: `${deletingCategory.color}20`,
+                                    color: deletingCategory.color,
+                                    border: `1px solid ${deletingCategory.color}`,
+                                }}
+                            >
+                                {deletingCategory.name}
+                            </span>
+                            <p className="text-sm text-[var(--color-text-muted)] mb-6">
+                                Hành động này không thể hoàn tác.
+                            </p>
+                            <div className="flex gap-3 w-full">
+                                <button
+                                    onClick={() => setDeletingCategory(null)}
+                                    className="btn btn-secondary flex-1"
+                                    disabled={isDeleting}
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    onClick={handleDeleteConfirm}
+                                    className="btn flex-1 bg-[var(--color-danger)] text-white hover:opacity-90"
+                                    disabled={isDeleting}
+                                >
+                                    {isDeleting ? (
+                                        <><Loader2 className="w-4 h-4 animate-spin" /> Đang xóa...</>
+                                    ) : (
+                                        'Xóa'
+                                    )}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
