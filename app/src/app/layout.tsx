@@ -20,6 +20,24 @@ export const metadata: Metadata = {
   title: "Ting Thu Chi - Quản Lý Tài Chính Cá Nhân",
   description: "Ứng dụng quản lý thu chi cá nhân thông minh",
   keywords: ["quản lý tài chính", "thu chi", "budget", "personal finance"],
+  manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Ting Thu Chi",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export const viewport = {
@@ -27,6 +45,7 @@ export const viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: "#8B5CF6",
 };
 
 export default function RootLayout({
