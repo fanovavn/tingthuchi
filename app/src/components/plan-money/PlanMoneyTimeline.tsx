@@ -95,7 +95,7 @@ export function PlanMoneyTimeline({ items, onDelete, onEdit, onAddToDay, onToggl
         return { income: inc, expense: exp };
     };
 
-    const days = Array.from({ length: 30 }, (_, i) => i + 1);
+    const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
     const checkedCount = items.filter(i => i.checked).length;
 
@@ -392,7 +392,7 @@ export function PlanMoneyTimeline({ items, onDelete, onEdit, onAddToDay, onToggl
             {/* Timeline Section */}
             <div className="glass-card p-4 sm:p-5">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base sm:text-lg font-semibold">Timeline 30 ngày</h3>
+                    <h3 className="text-base sm:text-lg font-semibold">Timeline 31 ngày</h3>
                     {checkedCount > 0 && (
                         <button
                             onClick={onClearAllChecks}

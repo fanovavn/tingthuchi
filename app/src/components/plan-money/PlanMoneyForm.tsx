@@ -12,7 +12,7 @@ interface PlanMoneyFormProps {
     onDelete?: (id: string) => void;
 }
 
-const days = Array.from({ length: 30 }, (_, i) => i + 1);
+const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
 export function PlanMoneyForm({ item, defaultDay, onSubmit, onCancel, onDelete }: PlanMoneyFormProps) {
     const [formData, setFormData] = useState({
