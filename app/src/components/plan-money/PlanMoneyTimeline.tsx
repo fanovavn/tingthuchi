@@ -346,6 +346,14 @@ export function PlanMoneyTimeline({ items, onDelete, onEdit, onAddToDay, onToggl
                     <span className="text-xs text-[var(--color-text-muted)]">
                         {items.filter(i => i.type === 'expense').length} khoản chi
                     </span>
+                    <div className="flex gap-3 text-xs mt-1">
+                        <span style={{ color: 'var(--color-success)' }}>
+                            ✓ {formatCurrency(items.filter(i => i.type === 'expense' && i.checked).reduce((s, i) => s + i.amount, 0))}
+                        </span>
+                        <span style={{ color: 'var(--color-danger)' }}>
+                            còn {formatCurrency(items.filter(i => i.type === 'expense' && !i.checked).reduce((s, i) => s + i.amount, 0))}
+                        </span>
+                    </div>
                 </div>
 
                 <div className="stat-card balance">
