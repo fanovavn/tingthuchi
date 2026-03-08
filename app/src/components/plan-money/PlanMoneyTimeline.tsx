@@ -482,6 +482,86 @@ export function PlanMoneyTimeline({ items, onDelete, onEdit, onAddToDay, onToggl
                     {days.map((day) => renderDayCard(day))}
                 </div>
             </div>
+
+            {/* Expense Mini Bar Chart */}
+            {(() => {
+                const expenseByDay = new Map<number, number>();
+                items.filter(i => i.type === 'expense').forEach(i => {
+                    expenseByDay.set(i.dayNumber, (expenseByDay.get(i.dayNumber) || 0) + i.amount);
+                });
+                const maxExpense = Math.max(...Array.from(expenseByDay.values()), 1);
+                const today = new Date().getDate();
+
+                return (
+                    <div className="glass-card p-4 sm:p-5">
+                        <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-secondary)' }}>
+                            Mức chi tiêu theo ngày
+                        </h3>
+                        <div className="flex items-end gap-[3px]" style={{ height: '120px' }}>
+                            {days.map(day => {
+                                const amount = expenseByDay.get(day) || 0;
+                                const pct = amount > 0 ? Math.max((amount / maxExpense) * 100, 8) : 0;
+                                const isToday = day === today;
+                                const isPast = day < today;
+
+                                return (
+                                    <div
+                                        key={day}
+                                        className="flex-1 flex flex-col items-center justify-end h-full"
+                                    >
+                                        {/* Amount label */}
+                                        {amount > 0 && (
+                                            <span
+                                                className="mb-1"
+                                                style={{
+                                                    fontSize: '8px',
+                                                    fontWeight: 600,
+                                                    color: isToday
+                                                        ? 'var(--color-primary)'
+                                                        : isPast
+                                                            ? 'var(--color-text-muted)'
+                                                            : 'var(--color-danger)',
+                                                    writingMode: amount >= 1000000 ? 'vertical-rl' : undefined,
+                                                    textOrientation: amount >= 1000000 ? 'mixed' : undefined,
+                                                }}
+                                            >
+                                                {shortAmount(amount)}
+                                            </span>
+                                        )}
+                                        {/* Bar */}
+                                        <div
+                                            className="w-full rounded-t transition-all"
+                                            style={{
+                                                height: amount > 0 ? `${pct}%` : '0%',
+                                                minHeight: amount > 0 ? '4px' : '0',
+                                                background: isToday
+                                                    ? 'var(--color-primary)'
+                                                    : isPast
+                                                        ? 'var(--color-text-muted)'
+                                                        : amount > 0
+                                                            ? 'linear-gradient(to top, #f97316, #ef4444)'
+                                                            : 'transparent',
+                                                opacity: isPast ? 0.4 : 0.85,
+                                            }}
+                                        />
+                                        {/* Day label */}
+                                        <span
+                                            className="mt-1"
+                                            style={{
+                                                fontSize: '8px',
+                                                color: isToday ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                                                fontWeight: isToday ? 700 : 400,
+                                            }}
+                                        >
+                                            {day}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }
