@@ -2,6 +2,30 @@
 
 Các thay đổi đáng chú ý của dự án sẽ được ghi lại trong tệp này.
 
+## [v8.3.0] - 2026-03-08
+
+### Thêm mới (Added)
+- **Trang Kế Hoạch Chi Tiêu** (`/plan-money`): Theo dõi thu/chi định kỳ trong tháng (cố định 30 ngày).
+  - Timeline 30 ngày dạng lưới với tổng quan thu/chi theo từng ngày.
+  - Dots navigation bar: nhấn vào dot để cuộn đến ngày tương ứng.
+  - Summary cards: Tổng Thu Dự Kiến, Tổng Chi Dự Kiến, Chênh Lệch.
+  - Person summary: Hiển thị số tiền cần xử lý theo từng người (Tý, Mèo).
+  - Nút **+** trên mỗi ô ngày để thêm hạng mục trực tiếp vào ngày đó.
+- **CRUD Kế Hoạch Chi Tiêu**: Tương tác Google Sheets qua tab "PlanMoney".
+  - Cấu trúc sheet: DayNumber | Note | Amount | Type | Assignee | Id | Description | Checked.
+  - API routes: `GET/POST /api/plan-money`, `PUT/DELETE /api/plan-money/[id]`, `POST/DELETE /api/plan-money/check`.
+- **Nhấn item để sửa/xóa**: Click vào item trên timeline mở form chỉnh sửa, có nút xóa với popup xác nhận 2 bước.
+- **Đánh dấu đã xử lý (Check)**: Nhấn icon trên item để đánh dấu hoàn thành.
+  - Viền xanh, tiêu đề gạch ngang, item mờ đi khi đã check.
+  - Trạng thái lưu trên Google Sheets (cột H) để đồng bộ giữa các thiết bị.
+  - Nút "Clear tất cả" để reset toàn bộ trạng thái check.
+- **Ghi chú thêm (Description)**: Trường ghi chú bổ sung cho mỗi hạng mục, hiển thị dạng italic trên timeline.
+- **Menu "Kế hoạch chi tiêu"**: Thêm vào Sidebar và MobileHeader với icon RefreshCw.
+
+### Thay đổi (Changed)
+- **Ô nhập số tiền**: Font lớn 24px, bold, tự động format dấu chấm phân cách (VD: 5.000.000).
+- **Cập nhật version**: Hiển thị v8.3.0 trên Sidebar và MobileHeader.
+
 ## [v8.2.0] - 2026-02-21
 
 ### Thêm mới (Added)

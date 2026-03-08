@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 import { Transaction } from '@/types/transaction';
 import { SavingTransaction } from '@/types/saving';
+import { PlanMoneyItem, Assignee } from '@/types/plan-money';
 import { generateId } from './utils';
 import { format } from 'date-fns';
 
@@ -602,3 +603,229 @@ export class CategorySheetsDB {
 }
 
 export const categorySheetsDB = new CategorySheetsDB();
+
+// ── PlanMoney Sheet DB ───────────────────────────────────────────────────
+// Sheet structure: A = DayNumber | B = Note | C = Amount | D = Type | E = Assignee | F = Id | G = Description | H = Checked
+
+const PLAN_MONEY_SHEET_NAME = 'PlanMoney';
+
+export class PlanMoneySheetsDB {
+    async getAll(): Promise<PlanMoneyItem[]> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) {
+            throw new Error('Chưa cấu hình Google Spreadsheet ID.');
+        }
+
+        const sheets = getSheets();
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${PLAN_MONEY_SHEET_NAME}!A:H`,
+        });
+
+        const rows = response.data.values;
+        if (!rows || rows.length <= 1) return [];
+
+        const dataRows = rows.slice(1); // Skip header row
+        const items: PlanMoneyItem[] = [];
+
+        for (const row of dataRows) {
+            const [dayNumberStr, note, amountStr, typeStr, assignee, id, description, checked] = row;
+            if (!dayNumberStr && !note) continue;
+
+            items.push({
+                id: id || generateId(),
+                dayNumber: parseInt(dayNumberStr, 10) || 1,
+                note: note || '',
+                amount: parseAmount(amountStr),
+                type: typeStr === 'Thu nhập' ? 'income' : 'expense',
+                assignee: (assignee as Assignee) || 'Tý',
+                description: description || '',
+                checked: checked === 'TRUE' || checked === '1',
+            });
+        }
+
+        // Sort by day number
+        items.sort((a, b) => a.dayNumber - b.dayNumber);
+        return items;
+    }
+
+    async add(item: Omit<PlanMoneyItem, 'id'>): Promise<PlanMoneyItem> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID');
+
+        const sheets = getSheets();
+        const newId = generateId();
+
+        const newRow = [
+            item.dayNumber,
+            item.note,
+            item.amount,
+            item.type === 'income' ? 'Thu nhập' : 'Chi phí',
+            item.assignee,
+            newId,
+            item.description || '',
+            '',
+        ];
+
+        await sheets.spreadsheets.values.append({
+            spreadsheetId,
+            range: `${PLAN_MONEY_SHEET_NAME}!A:H`,
+            valueInputOption: 'USER_ENTERED',
+            insertDataOption: 'INSERT_ROWS',
+            requestBody: { values: [newRow] },
+        });
+
+        return { ...item, id: newId, checked: false };
+    }
+
+    async update(id: string, updates: Partial<PlanMoneyItem>): Promise<void> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID');
+
+        const sheets = getSheets();
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${PLAN_MONEY_SHEET_NAME}!A:H`,
+        });
+
+        const rows = response.data.values;
+        if (!rows) throw new Error('No data found in sheet');
+
+        // Find row by ID (column F)
+        let rowIndex = -1;
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i][5] === id) {
+                rowIndex = i + 1; // 1-indexed for Sheets API
+                break;
+            }
+        }
+        if (rowIndex === -1) throw new Error(`PlanMoney item with ID ${id} not found`);
+
+        const currentRow = rows[rowIndex - 1];
+        const updatedRow = [
+            updates.dayNumber !== undefined ? updates.dayNumber : currentRow[0],
+            updates.note !== undefined ? updates.note : currentRow[1],
+            updates.amount !== undefined ? updates.amount : currentRow[2],
+            updates.type ? (updates.type === 'income' ? 'Thu nhập' : 'Chi phí') : currentRow[3],
+            updates.assignee || currentRow[4],
+            id,
+            updates.description !== undefined ? updates.description : (currentRow[6] || ''),
+            updates.checked !== undefined ? (updates.checked ? 'TRUE' : '') : (currentRow[7] || ''),
+        ];
+
+        await sheets.spreadsheets.values.update({
+            spreadsheetId,
+            range: `${PLAN_MONEY_SHEET_NAME}!A${rowIndex}:H${rowIndex}`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: { values: [updatedRow] },
+        });
+    }
+
+    async toggleCheck(id: string): Promise<boolean> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID');
+
+        const sheets = getSheets();
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${PLAN_MONEY_SHEET_NAME}!F:H`,
+        });
+
+        const rows = response.data.values;
+        if (!rows) throw new Error('No data found');
+
+        let rowIndex = -1;
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i][0] === id) {
+                rowIndex = i + 1;
+                break;
+            }
+        }
+        if (rowIndex === -1) throw new Error(`Item ${id} not found`);
+
+        const currentChecked = rows[rowIndex - 1][2] === 'TRUE' || rows[rowIndex - 1][2] === '1';
+        const newChecked = !currentChecked;
+
+        await sheets.spreadsheets.values.update({
+            spreadsheetId,
+            range: `${PLAN_MONEY_SHEET_NAME}!H${rowIndex}`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: { values: [[newChecked ? 'TRUE' : '']] },
+        });
+
+        return newChecked;
+    }
+
+    async clearAllChecks(): Promise<void> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID');
+
+        const sheets = getSheets();
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${PLAN_MONEY_SHEET_NAME}!H:H`,
+        });
+
+        const rows = response.data.values;
+        if (!rows || rows.length <= 1) return;
+
+        // Clear all H column values (skip header)
+        const clearValues = rows.slice(1).map(() => ['']);
+
+        await sheets.spreadsheets.values.update({
+            spreadsheetId,
+            range: `${PLAN_MONEY_SHEET_NAME}!H2:H${rows.length}`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: { values: clearValues },
+        });
+    }
+
+
+    async delete(id: string): Promise<void> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID');
+
+        const sheets = getSheets();
+        const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+        const sheet = spreadsheet.data.sheets?.find(
+            s => s.properties?.title === PLAN_MONEY_SHEET_NAME
+        );
+        if (!sheet?.properties?.sheetId) throw new Error(`Sheet ${PLAN_MONEY_SHEET_NAME} not found`);
+
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${PLAN_MONEY_SHEET_NAME}!A:F`,
+        });
+
+        const rows = response.data.values;
+        if (!rows) throw new Error('No data found in sheet');
+
+        // Find row by ID (column F)
+        let rowIndex = -1;
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i][5] === id) {
+                rowIndex = i;
+                break;
+            }
+        }
+        if (rowIndex === -1) throw new Error(`PlanMoney item with ID ${id} not found`);
+
+        await sheets.spreadsheets.batchUpdate({
+            spreadsheetId,
+            requestBody: {
+                requests: [{
+                    deleteDimension: {
+                        range: {
+                            sheetId: sheet.properties.sheetId,
+                            dimension: 'ROWS',
+                            startIndex: rowIndex,
+                            endIndex: rowIndex + 1,
+                        },
+                    },
+                }],
+            },
+        });
+    }
+}
+
+export const planMoneySheetsDB = new PlanMoneySheetsDB();
