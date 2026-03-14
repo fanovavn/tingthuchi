@@ -2,6 +2,7 @@ import { google } from 'googleapis';
 import { Transaction } from '@/types/transaction';
 import { SavingTransaction } from '@/types/saving';
 import { PlanMoneyItem, Assignee } from '@/types/plan-money';
+import { InvestmentItem, InvestmentType, InvestmentStatus } from '@/types/investment';
 import { generateId } from './utils';
 import { format } from 'date-fns';
 
@@ -63,8 +64,9 @@ const parseAmount = (amountStr: string | number): number => {
     }
     if (!amountStr) return 0;
 
-    // Remove currency symbol, spaces, and "đ"
-    let cleaned = amountStr.toString().replace(/[đ\s]/g, '').trim();
+    // Keep ONLY digits, dots, commas, and minus sign — strips ALL currency symbols
+    // (đ U+0111, ₫ U+20AB, VND, spaces, non-breaking spaces, etc.)
+    let cleaned = amountStr.toString().replace(/[^\d.,-]/g, '').trim();
 
     // If contains dot as thousand separator (Vietnamese format like "205.000")
     // Check if it looks like Vietnamese format: dots followed by exactly 3 digits
@@ -829,3 +831,424 @@ export class PlanMoneySheetsDB {
 }
 
 export const planMoneySheetsDB = new PlanMoneySheetsDB();
+
+// ── LoanManagement Sheet DB ─────────────────────────────────────────────
+// Sheet structure: A = Id | B = Title | C = Amount | D = Priority | E = TypeLoan | F = Lãi hàng tháng | G = Tổng trả tháng | H = Description | I = NeedClear
+import { LoanItem, LoanPriority, LoanType } from '@/types/loan';
+
+const LOAN_SHEET_NAME = 'LoanManagement';
+
+export class LoanManagementSheetsDB {
+    async getAll(): Promise<LoanItem[]> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) {
+            throw new Error('Chưa cấu hình Google Spreadsheet ID.');
+        }
+
+        const sheets = getSheets();
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${LOAN_SHEET_NAME}!A:J`,
+        });
+
+        const rows = response.data.values;
+        if (!rows || rows.length <= 1) return [];
+
+        const dataRows = rows.slice(1);
+        const items: LoanItem[] = [];
+
+        for (const row of dataRows) {
+            const [id, title, amountStr, priority, typeLoan, monthlyInterestStr, monthlyPaymentStr, description, needClear, clearAmountStr] = row;
+            if (!id && !title) continue;
+
+            const amount = parseAmount(amountStr);
+            items.push({
+                id: id || generateId(),
+                title: title || '',
+                amount,
+                priority: (priority as LoanPriority) || 'ASAP',
+                typeLoan: (typeLoan as LoanType) || 'Tín dụng',
+                monthlyInterest: parseAmount(monthlyInterestStr),
+                monthlyPayment: parseAmount(monthlyPaymentStr),
+                description: description || '',
+                needClear: needClear === 'TRUE' || needClear === '1',
+                clearAmount: parseAmount(clearAmountStr) || 0,
+            });
+        }
+
+        // Sort by amount descending (largest loan first)
+        items.sort((a, b) => b.amount - a.amount);
+        return items;
+    }
+
+    async add(item: Omit<LoanItem, 'id'>): Promise<LoanItem> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID');
+
+        const sheets = getSheets();
+        const newId = generateId();
+
+        const newRow = [
+            newId,
+            item.title,
+            item.amount,
+            item.priority,
+            item.typeLoan,
+            item.monthlyInterest || 0,
+            item.monthlyPayment || 0,
+            item.description || '',
+            item.needClear ? 'TRUE' : 'FALSE',
+            item.clearAmount || 0,
+        ];
+
+        await sheets.spreadsheets.values.append({
+            spreadsheetId,
+            range: `${LOAN_SHEET_NAME}!A:J`,
+            valueInputOption: 'USER_ENTERED',
+            insertDataOption: 'INSERT_ROWS',
+            requestBody: { values: [newRow] },
+        });
+
+        return { ...item, id: newId };
+    }
+
+    async update(id: string, updates: Partial<LoanItem>): Promise<void> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID');
+
+        const sheets = getSheets();
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${LOAN_SHEET_NAME}!A:J`,
+        });
+
+        const rows = response.data.values;
+        if (!rows) throw new Error('No data found in sheet');
+
+        // Find row by ID (column A)
+        let rowIndex = -1;
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i][0] === id) {
+                rowIndex = i + 1; // 1-indexed for Sheets API
+                break;
+            }
+        }
+        if (rowIndex === -1) throw new Error(`Loan with ID ${id} not found`);
+
+        const currentRow = rows[rowIndex - 1];
+        const updatedRow = [
+            id,
+            updates.title !== undefined ? updates.title : currentRow[1],
+            updates.amount !== undefined ? updates.amount : currentRow[2],
+            updates.priority || currentRow[3],
+            updates.typeLoan || currentRow[4],
+            updates.monthlyInterest !== undefined ? updates.monthlyInterest : currentRow[5],
+            updates.monthlyPayment !== undefined ? updates.monthlyPayment : currentRow[6],
+            updates.description !== undefined ? updates.description : (currentRow[7] || ''),
+            updates.needClear !== undefined ? (updates.needClear ? 'TRUE' : 'FALSE') : (currentRow[8] || 'FALSE'),
+            updates.clearAmount !== undefined ? updates.clearAmount : (currentRow[9] || 0),
+        ];
+
+        await sheets.spreadsheets.values.update({
+            spreadsheetId,
+            range: `${LOAN_SHEET_NAME}!A${rowIndex}:J${rowIndex}`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: { values: [updatedRow] },
+        });
+    }
+
+    async toggleNeedClear(id: string, clearAmount?: number): Promise<{ needClear: boolean; clearAmount: number }> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID');
+
+        const sheets = getSheets();
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${LOAN_SHEET_NAME}!A:J`,
+        });
+
+        const rows = response.data.values;
+        if (!rows) throw new Error('No data found');
+
+        let rowIndex = -1;
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i][0] === id) {
+                rowIndex = i + 1;
+                break;
+            }
+        }
+        if (rowIndex === -1) throw new Error(`Loan ${id} not found`);
+
+        const currentRow = rows[rowIndex - 1];
+        const currentNeedClear = currentRow[8] === 'TRUE' || currentRow[8] === '1';
+        const newNeedClear = !currentNeedClear;
+        // When enabling: use provided clearAmount or default to loan amount; when disabling: set to 0
+        const loanAmount = parseAmount(currentRow[2]);
+        const newClearAmount = newNeedClear
+            ? (clearAmount !== undefined ? Math.min(clearAmount, loanAmount) : loanAmount)
+            : 0;
+
+        await sheets.spreadsheets.values.update({
+            spreadsheetId,
+            range: `${LOAN_SHEET_NAME}!I${rowIndex}:J${rowIndex}`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: { values: [[newNeedClear ? 'TRUE' : 'FALSE', newClearAmount]] },
+        });
+
+        return { needClear: newNeedClear, clearAmount: newClearAmount };
+    }
+
+    async delete(id: string): Promise<void> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID');
+
+        const sheets = getSheets();
+        const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+        const sheet = spreadsheet.data.sheets?.find(
+            s => s.properties?.title === LOAN_SHEET_NAME
+        );
+        if (!sheet?.properties?.sheetId) throw new Error(`Sheet ${LOAN_SHEET_NAME} not found`);
+
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${LOAN_SHEET_NAME}!A:J`,
+        });
+
+        const rows = response.data.values;
+        if (!rows) throw new Error('No data found in sheet');
+
+        // Find row by ID (column A)
+        let rowIndex = -1;
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i][0] === id) {
+                rowIndex = i;
+                break;
+            }
+        }
+        if (rowIndex === -1) throw new Error(`Loan with ID ${id} not found`);
+
+        await sheets.spreadsheets.batchUpdate({
+            spreadsheetId,
+            requestBody: {
+                requests: [{
+                    deleteDimension: {
+                        range: {
+                            sheetId: sheet.properties.sheetId,
+                            dimension: 'ROWS',
+                            startIndex: rowIndex,
+                            endIndex: rowIndex + 1,
+                        },
+                    },
+                }],
+            },
+        });
+    }
+}
+
+export const loanManagementSheetsDB = new LoanManagementSheetsDB();
+
+// ─── Investment Management ──────────────────────────────────────────────────
+const INVESTMENT_SHEET_NAME = 'Investment';
+
+export class InvestmentSheetsDB {
+    async getAll(): Promise<InvestmentItem[]> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID.');
+
+        const sheets = getSheets();
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${INVESTMENT_SHEET_NAME}!A:N`,
+        });
+
+        const rows = response.data.values;
+        if (!rows || rows.length <= 1) return [];
+
+        const dataRows = rows.slice(1);
+        const items: InvestmentItem[] = [];
+
+        for (const row of dataRows) {
+            const [id, title, type, buyPriceStr, quantityStr, totalInvestedStr, currentPriceStr, currentValueStr, profitLossStr, profitPercentStr, buyDate, status, platform, note] = row;
+            if (!id && !title) continue;
+
+            const buyPrice = parseAmount(buyPriceStr);
+            const quantity = parseFloat(quantityStr) || 0;
+            const totalInvested = parseAmount(totalInvestedStr) || buyPrice * quantity;
+            const currentPrice = parseAmount(currentPriceStr);
+            const currentValue = parseAmount(currentValueStr) || currentPrice * quantity;
+            const profitLoss = parseAmount(profitLossStr) || currentValue - totalInvested;
+            const profitPercent = parseFloat(profitPercentStr) || (totalInvested > 0 ? ((profitLoss / totalInvested) * 100) : 0);
+
+            items.push({
+                id: id || generateId(),
+                title: title || '',
+                type: (type as InvestmentType) || 'Khác',
+                buyPrice,
+                quantity,
+                totalInvested,
+                currentPrice,
+                currentValue,
+                profitLoss,
+                profitPercent,
+                buyDate: buyDate || '',
+                status: (status as InvestmentStatus) || 'Đang giữ',
+                platform: platform || '',
+                note: note || '',
+            });
+        }
+
+        // Sort by totalInvested descending
+        items.sort((a, b) => b.totalInvested - a.totalInvested);
+        return items;
+    }
+
+    async add(item: Omit<InvestmentItem, 'id'>): Promise<InvestmentItem> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID');
+
+        const sheets = getSheets();
+        const newId = generateId();
+        const totalInvested = item.buyPrice * item.quantity;
+        const currentValue = item.currentPrice * item.quantity;
+        const profitLoss = currentValue - totalInvested;
+        const profitPercent = totalInvested > 0 ? ((profitLoss / totalInvested) * 100) : 0;
+
+        const newRow = [
+            newId,
+            item.title,
+            item.type,
+            item.buyPrice,
+            item.quantity,
+            totalInvested,
+            item.currentPrice,
+            currentValue,
+            profitLoss,
+            profitPercent.toFixed(2),
+            item.buyDate,
+            item.status,
+            item.platform || '',
+            item.note || '',
+        ];
+
+        await sheets.spreadsheets.values.append({
+            spreadsheetId,
+            range: `${INVESTMENT_SHEET_NAME}!A:N`,
+            valueInputOption: 'USER_ENTERED',
+            insertDataOption: 'INSERT_ROWS',
+            requestBody: { values: [newRow] },
+        });
+
+        return {
+            ...item,
+            id: newId,
+            totalInvested,
+            currentValue,
+            profitLoss,
+            profitPercent,
+        };
+    }
+
+    async update(id: string, updates: Partial<InvestmentItem>): Promise<void> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID');
+
+        const sheets = getSheets();
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${INVESTMENT_SHEET_NAME}!A:N`,
+        });
+
+        const rows = response.data.values;
+        if (!rows) throw new Error('No data found in sheet');
+
+        let rowIndex = -1;
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i][0] === id) {
+                rowIndex = i + 1;
+                break;
+            }
+        }
+        if (rowIndex === -1) throw new Error(`Investment with ID ${id} not found`);
+
+        const currentRow = rows[rowIndex - 1];
+
+        const buyPrice = updates.buyPrice !== undefined ? updates.buyPrice : parseAmount(currentRow[3]);
+        const quantity = updates.quantity !== undefined ? updates.quantity : (parseFloat(currentRow[4]) || 0);
+        const currentPrice = updates.currentPrice !== undefined ? updates.currentPrice : parseAmount(currentRow[6]);
+        const totalInvested = buyPrice * quantity;
+        const currentValue = currentPrice * quantity;
+        const profitLoss = currentValue - totalInvested;
+        const profitPercent = totalInvested > 0 ? ((profitLoss / totalInvested) * 100) : 0;
+
+        const updatedRow = [
+            id,
+            updates.title !== undefined ? updates.title : currentRow[1],
+            updates.type || currentRow[2],
+            buyPrice,
+            quantity,
+            totalInvested,
+            currentPrice,
+            currentValue,
+            profitLoss,
+            profitPercent.toFixed(2),
+            updates.buyDate !== undefined ? updates.buyDate : (currentRow[10] || ''),
+            updates.status || currentRow[11],
+            updates.platform !== undefined ? updates.platform : (currentRow[12] || ''),
+            updates.note !== undefined ? updates.note : (currentRow[13] || ''),
+        ];
+
+        await sheets.spreadsheets.values.update({
+            spreadsheetId,
+            range: `${INVESTMENT_SHEET_NAME}!A${rowIndex}:N${rowIndex}`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: { values: [updatedRow] },
+        });
+    }
+
+    async delete(id: string): Promise<void> {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('Chưa cấu hình Google Spreadsheet ID');
+
+        const sheets = getSheets();
+        const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+        const sheet = spreadsheet.data.sheets?.find(
+            s => s.properties?.title === INVESTMENT_SHEET_NAME
+        );
+        if (!sheet?.properties?.sheetId) throw new Error(`Sheet ${INVESTMENT_SHEET_NAME} not found`);
+
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${INVESTMENT_SHEET_NAME}!A:N`,
+        });
+
+        const rows = response.data.values;
+        if (!rows) throw new Error('No data found in sheet');
+
+        let rowIndex = -1;
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i][0] === id) {
+                rowIndex = i;
+                break;
+            }
+        }
+        if (rowIndex === -1) throw new Error(`Investment with ID ${id} not found`);
+
+        await sheets.spreadsheets.batchUpdate({
+            spreadsheetId,
+            requestBody: {
+                requests: [{
+                    deleteDimension: {
+                        range: {
+                            sheetId: sheet.properties.sheetId,
+                            dimension: 'ROWS',
+                            startIndex: rowIndex,
+                            endIndex: rowIndex + 1,
+                        },
+                    },
+                }],
+            },
+        });
+    }
+}
+
+export const investmentSheetsDB = new InvestmentSheetsDB();

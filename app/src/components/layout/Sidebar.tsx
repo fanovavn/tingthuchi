@@ -11,6 +11,8 @@ import {
     Calendar,
     PiggyBank,
     RefreshCw,
+    Landmark,
+    TrendingUp,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -18,6 +20,8 @@ const NAV_ITEMS = [
     { href: '/transactions', label: 'Giao dịch', icon: Receipt },
     { href: '/savings', label: 'Tiết kiệm', icon: PiggyBank },
     { href: '/plan-money', label: 'Kế hoạch chi tiêu', icon: RefreshCw },
+    { href: '/loans', label: 'Quản lý nợ', icon: Landmark },
+    { href: '/investments', label: 'Danh mục đầu tư', icon: TrendingUp },
     { href: '/categories', label: 'Danh mục', icon: Tag },
     { href: '/year-summary', label: 'Tổng Kết Năm', icon: Calendar },
 ];
