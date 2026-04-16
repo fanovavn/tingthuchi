@@ -22,6 +22,7 @@ interface PlanMoneyTimelineProps {
     onAddToDay: (day: number) => void;
     onToggleCheck: (id: string) => void;
     onClearAllChecks: () => void;
+    onShowPending?: () => void;
 }
 
 function formatCurrency(amount: number): string {
@@ -39,7 +40,7 @@ const personColors: Record<Assignee, { bg: string; text: string; border: string 
     'Mèo': { bg: 'bg-pink-500/10', text: 'text-pink-400', border: 'border-pink-400/30' },
 };
 
-export function PlanMoneyTimeline({ items, onDelete, onEdit, onAddToDay, onToggleCheck, onClearAllChecks }: PlanMoneyTimelineProps) {
+export function PlanMoneyTimeline({ items, onDelete, onEdit, onAddToDay, onToggleCheck, onClearAllChecks, onShowPending }: PlanMoneyTimelineProps) {
     const currentDay = new Date().getDate();
     const dotsBarRef = useRef<HTMLDivElement>(null);
     const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -382,7 +383,7 @@ export function PlanMoneyTimeline({ items, onDelete, onEdit, onAddToDay, onToggl
                     </div>
                     <span className="text-sm text-[var(--color-text-secondary)]">Tý cần xử lý</span>
                     <span className="text-sm sm:text-base font-semibold text-blue-400">
-                        {formatCurrency(items.filter(i => i.assignee === 'Tý' && i.type === 'expense').reduce((s, i) => s + i.amount, 0))}
+                        {formatCurrency(items.filter(i => i.assignee === 'Tý' && i.type === 'expense' && !i.checked).reduce((s, i) => s + i.amount, 0))}
                     </span>
                 </div>
                 <div className="w-px h-6 bg-[var(--color-border)] hidden sm:block" />
@@ -392,8 +393,17 @@ export function PlanMoneyTimeline({ items, onDelete, onEdit, onAddToDay, onToggl
                     </div>
                     <span className="text-sm text-[var(--color-text-secondary)]">Mèo cần xử lý</span>
                     <span className="text-sm sm:text-base font-semibold text-pink-400">
-                        {formatCurrency(items.filter(i => i.assignee === 'Mèo' && i.type === 'expense').reduce((s, i) => s + i.amount, 0))}
+                        {formatCurrency(items.filter(i => i.assignee === 'Mèo' && i.type === 'expense' && !i.checked).reduce((s, i) => s + i.amount, 0))}
                     </span>
+                </div>
+                <div className="ml-auto">
+                    <button
+                        onClick={onShowPending}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:bg-[var(--color-surface-hover)]"
+                        style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}
+                    >
+                        Chi tiết
+                    </button>
                 </div>
             </div>
 
